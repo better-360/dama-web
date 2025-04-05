@@ -1,0 +1,243 @@
+{
+  "languageSelection": {
+    "title": "Language Selection",
+    "subtitle": "Please select your preferred language",
+    "continue": "Continue",
+    "selected": "Selected"
+  },
+  "languages": {
+    "tr": "Turkish",
+    "en": "English"
+  },
+  "intro": {
+    "start": "Start",
+    "welcome": "Welcome to DAMA Advisors",
+    "description": "We specialize in Defense Base Act (DBA) claims, providing expert legal support for workers facing workplace injuries or illnesses.",
+    "expertise": "DBA Expertise",
+    "expertiseDesc": "Our team has extensive experience in handling complex DBA cases, ensuring your rights are protected throughout the process.",
+    "support": "Comprehensive Support",
+    "supportDesc": "We guide you through every step of your claim, from initial filing to final resolution, with personalized attention to your case.",
+    "newApplication": "Start a Application",
+    "login": "Login",
+    "or": "or"
+  },
+  "requirements": {
+    "back": "Go Back",
+    "title": "Application Requirements",
+    "description": "To complete your application, we'll need the following documents. Please ensure you have these ready before proceeding.",
+    "warning": "Your application may be delayed or cannot be completed if you're unable to upload the required documents.",
+    "documents": [
+      {
+        "title": "Passport and Travel Records",
+        "description": "Your passport and entry-exit records from the period you worked at the bases"
+      },
+      {
+        "title": "Employment Documents",
+        "description": "Documents showing your employment with the company and your position (employment contracts, assignment letters, etc.)"
+      },
+      {
+        "title": "Recognition Documents",
+        "description": "If available, any recognition, appreciation, or achievement certificates from your workplace"
+      },
+      {
+        "title": "Payment Records",
+        "description": "Bank statements or payment records showing your salary payments"
+      }
+    ],
+    "continue": "I Have the Documents, Continue",
+    "note": "All documents will be stored securely and used only for your application."
+  },
+  "applicationRequirements": {
+    "back": "Go Back",
+    "title": "Application Requirements",
+    "description": "To complete your application, we'll need the following documents. Please ensure you have these ready before proceeding.",
+    "warning": "Your application may be delayed or cannot be completed if you're unable to upload the required documents.",
+    "documents": [
+      {
+        "title": "Passport and Travel Records",
+        "description": "Your passport and entry-exit records from the period you worked at the bases"
+      },
+      {
+        "title": "Employment Documents",
+        "description": "Documents showing your employment with the company and your position (employment contracts, assignment letters, etc.)"
+      },
+      {
+        "title": "Recognition Documents",
+        "description": "If available, any recognition, appreciation, or achievement certificates from your workplace"
+      },
+      {
+        "title": "Payment Records",
+        "description": "Bank statements or payment records showing your salary payments"
+      },
+      {
+        "title": "Payment Records",
+        "description": "Bank statements or payment records showing your salary payments"
+      },
+      {
+        "title": "Payment Records",
+        "description": "Bank statements or payment records showing your salary payments"
+      }
+    ],
+    "continue": "I Have the Documents, Continue",
+    "note": "All documents will be stored securely and used only for your application."
+  },
+  "whatsapp": {
+    "back": "Go Back",
+    "title": "Phone Verification",
+    "description": "Please enter your phone number to receive a WhatsApp verification code",
+    "phoneLabel": "Phone Number",
+    "continue": "Continue",
+    "otpTitle": "Enter Verification Code",
+    "otpDescription": "We've sent a 4-digit code to your WhatsApp",
+    "sentTo": "Code sent to",
+    "otpValidity": "Code valid for",
+    "verify": "Verify Code"
+  },
+  "contactInfo": {
+    "back": "Go Back",
+    "title": "Contact Information",
+    "description": "Please provide your contact details",
+    "firstName": "First Name",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastName": "Last Name",
+    "lastNamePlaceholder": "Enter your last name",
+    "birthDate": "Date of Birth",
+    "birthDateNote": "You must be at least 18 years old",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email address",
+    "emailOptional": "Email address is optional",
+    "continue": "Continue"
+  },
+  "incidentForm": {
+    "back": "Go Back",
+    "title": "Describe Your Incident",
+    "description": "Providing a detailed description of the incident that occurred during your time at the bases is crucial for evaluating your application.",
+    "label": "Incident Description",
+    "showTips": "Show Tips",
+    "tipsTitle": "Tips for writing your description:",
+    "tips": [
+      "Try to specify the exact date (day/month/year) of the incident",
+      "Describe the location (which base, which section) where it occurred",
+      "Include names of people who were present during the incident",
+      "Detail the health issues you experienced",
+      "Mention the treatments you received and hospitals you visited afterward"
+    ],
+    "placeholder": "Please provide a detailed description of the incident...",
+    "minChars": "Minimum 100 characters required",
+    "continue": "Continue"
+  },
+  "passportUpload": {
+    "back": "Go Back",
+    "title": "Passport and Travel Documents",
+    "description": "Please upload your passport pages and entry-exit records from the period you worked at the bases.",
+    "warning": "The identification page of your passport and pages containing entry-exit stamps from your time at the bases are required.",
+    "dropzone": {
+      "title": "Drag and drop files here or click to select",
+      "subtitle": "PDF or image files are accepted"
+    },
+    "uploadedFiles": "Uploaded Documents",
+    "continue": "Continue"
+  },
+  "employmentUpload": {
+    "back": "Go Back",
+    "title": "Employment Documents",
+    "description": "Upload documents that show your employment with the company and your position at the bases.",
+    "important": "Important Note",
+    "warning": "Documents such as employment contracts or assignment letters will play a crucial role in evaluating your application.",
+    "showExamples": "What documents can I upload?",
+    "examples": {
+      "title": "Examples of documents you can upload:",
+      "list": [
+        "Employment contract",
+        "Assignment letters or appointment documents",
+        "Start/end of employment letters",
+        "Work certificate or service record",
+        "Company-issued ID card",
+        "Job description documents, if available",
+        "Email correspondence or job offer letters"
+      ]
+    },
+    "dropzone": {
+      "title": "Drag and drop files here or click to select",
+      "subtitle": "PDF or image files are accepted"
+    },
+    "uploadedFiles": "Uploaded Documents",
+    "continue": "Continue"
+  },
+  "recognitionUpload": {
+    "back": "Go Back",
+    "title": "Recognition Documents",
+    "description": "Do you have any recognition, appreciation, or achievement certificates from your time working at the bases?",
+    "hasDocuments": "Yes, I have documents",
+    "hasDocumentsDesc": "I have recognition, appreciation, or achievement certificates",
+    "noDocuments": "No, I don't have any",
+    "noDocumentsDesc": "I didn't receive any recognition or appreciation documents",
+    "uploadTitle": "Upload Your Recognition Documents",
+    "uploadDescription": "Upload any recognition, appreciation, or achievement certificates you have received.",
+    "dropzone": {
+      "title": "Drag and drop files here or click to select",
+      "subtitle": "PDF or image files are accepted"
+    },
+    "uploadedFiles": "Uploaded Documents",
+    "continue": "Continue"
+  },
+  "paymentUpload": {
+    "back": "Go Back",
+    "title": "Payment and Salary Records",
+    "description": "Upload bank statements, pay slips, or other documents showing the payments you received while working at the bases.",
+    "important": "Important Information",
+    "warning": "Documents showing your salary payments will play a crucial role in evaluating your application. You can proceed with your application even if you cannot find these documents.",
+    "showExamples": "What documents can I upload?",
+    "examples": {
+      "title": "Examples of documents you can upload:",
+      "list": [
+        "Bank account statements",
+        "Pay slips",
+        "Payment receipts",
+        "Bank account summary",
+        "SMS or email notifications showing salary deposits",
+        "Payment vouchers",
+        "Additional payment documents, if any"
+      ]
+    },
+    "dropzone": {
+      "title": "Drag and drop files here or click to select",
+      "subtitle": "PDF or image files are accepted"
+    },
+    "uploadedFiles": "Uploaded Documents",
+    "continue": "Continue"
+  },
+  "summary": {
+    "back": "Go Back",
+    "title": "Application Summary",
+    "description": "Please review your application details before submitting",
+    "edit": "Edit",
+    "submit": "Submit Application",
+    "sections": {
+      "contact": "Contact Number",
+      "personalInfo": "Personal Information",
+      "incident": "Incident Description",
+      "passport": "Passport Documents",
+      "employment": "Employment Documents",
+      "recognition": "Recognition Documents",
+      "payment": "Payment Records"
+    },
+    "filesUploaded": "{{count}} files uploaded",
+    "noDocuments": "No documents provided"
+  },
+  "success": {
+    "title": "Application Submitted Successfully",
+    "description": "Thank you for submitting your application. Our team will review your information and contact you soon.",
+    "note": "Please keep your phone available as we will contact you via WhatsApp for any additional information or updates regarding your application."
+  },
+  "common": {
+    "back": "Go Back",
+    "show": "Show",
+    "hide": "Hide",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  }
+}

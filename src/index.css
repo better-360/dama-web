@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.5s ease-in-out forwards;
+}
+
+/* Custom styles for react-phone-number-input */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #f3f4f6;
+  border-radius: 0.75rem;
+}
+
+.PhoneInputCountrySelect {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.PhoneInputInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+.PhoneInputInput:focus {
+  outline: none;
+}
+
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background-color: #f3f4f6;
+}
+
+.PhoneInputCountrySelect {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  padding-right: 1rem;
+}
