@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, AlertCircle, ChevronRight, Briefcase } from "lucide-react";
-import { uploadFirestorage } from "../../../utils/firebase";
+import { uploadFileToS3 } from "../../../utils/firebase"; // S3 yükleme fonksiyonu
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
-import { useAppSelector } from "../../../store/hooks";
-
 interface EmploymentUploadProps {
   onBack: () => void;
   onContinue: (files: File[]) => void;
@@ -18,58 +16,55 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
   onContinue,
 }) => {
   const { t } = useTranslation();
-  const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileUrls, setFileUrls] = useState<any>();
+  const [files, setFiles] = useState<File[]>([]);
   const [showTips, setShowTips] = useState(false);
-  const applicatorData = useAppSelector(
-    (state) => state.applicator.applicatorData
-  );
+  // Dosyaları S3'e yükleyip URL'leri topluyoruz.
+  
+  const handleUploadAll = async (): Promise<string[]> => {
+    const uploadedFileKeys: string[] = [];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (files.length > 0) {
-      await handleSave();
-      onContinue(files);
+    for (const file of files) {
+      try {
+        const { fileKey } = await uploadFileToS3(
+          file,
+          file.name,
+          file.type,
+          folder
+        );
+        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
+        uploadedFileKeys.push(fileKey);
+      } catch (err) {
+        console.error("Error uploading file:", file.name, err);
+        setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
+      }
     }
+    // İstersen burada da files'ı temizleyebilirsin.
+    setFiles([]);
+    return uploadedFileKeys;
   };
 
-  const handleSaveStep4 = async () => {
+  // İşlemleri kaydetmek için backend'e gönderme
+  const handleSaveStep4 = async (urls: string[]) => {
     const data = {
       step: 4,
       section: "employment",
       data: {
-        employmentFiles: fileUrls,
+        employmentFiles: urls,
       },
     };
+    console.log("Data to be sent:", data);
     await updatePreApplicationSection(data);
   };
-
-  const handleSave = async (exitAfterSave: boolean = false) => {
-    setSaving(true);
-
-    try {
-      // Example of how you might handle uploading multiple files
-      const uploadPromises = files.map(async (file) => {
-        const fileUrl = await uploadFirestorage(
-          file,
-          folder,
-          applicatorData.application.id
-        );
-        return { file, url: fileUrl };
-      });
-
-      const uploadResults = await Promise.all(uploadPromises);
-      setFileUrls(uploadResults);
-      await handleSaveStep4();
-      if (exitAfterSave) {
-        onContinue(files);
-      }
-    } catch (error) {
-      console.error("Error saving data:", error);
-      setError("An error occurred while saving files");
-    } finally {
+  // Form submitinde önce dosyaları S3'e yükleyip, ardından backend'e kaydediyoruz.
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (files.length > 0) {
+      setSaving(true);
+      const uploadedUrls = await handleUploadAll(); // handleUploadAll'u güncelleyelim
+      await handleSaveStep4(uploadedUrls);
+      onContinue(files);
       setSaving(false);
     }
   };
@@ -132,7 +127,7 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
             <ul className="list-disc list-inside space-y-3 text-sm text-blue-800">
               {/* @ts-ignore */}
               {t("employmentUpload.examples.list", { returnObjects: true }).map(
-                (example, index) => (
+                (example: any, index: number) => (
                   <li key={index} className="pl-2">
                     {example}
                   </li>
@@ -150,6 +145,13 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
             label="Employment"
             allowedTypes={[
               "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.ms-excel",
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-powerpoint",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.ms-access",
               "image/jpeg",
               "image/png",
               "image/jpg",
@@ -158,7 +160,7 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
 
           <button
             type="submit"
-            disabled={files.length === 0}
+            disabled={files.length === 0 || saving}
             className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
               ${
                 files.length > 0
@@ -166,9 +168,12 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               } transition-all duration-300`}
           >
-            {t("employmentUpload.continue")}
+            {saving
+              ? t("employmentUpload.saving")
+              : t("employmentUpload.continue")}
             <ChevronRight className="w-5 h-5" />
           </button>
+          {error && <p className="text-red-500 text-center">{error}</p>}
         </form>
       </div>
     </div>

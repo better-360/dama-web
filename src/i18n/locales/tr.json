@@ -81,18 +81,6 @@
     "continue": "I Have the Documents, Continue",
     "note": "All documents will be stored securely and used only for your application."
   },
-  "whatsapp": {
-    "back": "Geri Dön",
-    "title": "Telefon Doğrulama",
-    "description": "WhatsApp doğrulama kodu almak için lütfen telefon numaranızı girin",
-    "phoneLabel": "Telefon Numarası",
-    "continue": "Devam Et",
-    "otpTitle": "Doğrulama Kodunu Girin",
-    "otpDescription": "WhatsApp'ınıza 4 haneli bir kod gönderdik",
-    "sentTo": "Kod gönderilen numara",
-    "otpValidity": "Kodun geçerlilik süresi",
-    "verify": "Kodu Doğrula"
-  },
   "contactInfo": {
     "back": "Geri Dön",
     "title": "İletişim Bilgileri",
@@ -164,6 +152,25 @@
     "uploadedFiles": "Yüklenen Belgeler",
     "continue": "Devam Et"
   },
+  "employment": {
+  "employerInfo": "İşveren Bilgileri",
+  "title": "İş Bilgileri",
+  "subtitle": "Lütfen iş bilgilerinizi doldurun",
+  "employerName": "İşveren Adı",
+  "employerNamePlaceholder": "İşvereninizin adını girin",
+  "position": "Pozisyon",
+  "positionPlaceholder": "Pozisyonunuzu girin",
+  "salary": "Maaş",
+  "paymentInfo": "Ödeme Bilgileri",
+  "isContractor": "Taşeron musunuz?",
+  "paymentType": "Ödeme Türü",
+  "singleCompany": "Tek Şirket",
+  "multipleCompanies": "Birden Fazla Şirket",
+  "totalCompensation": "Toplam Ücret",
+  "totalCompensationPlaceholder": "Toplam ücretinizi girin",
+  "contractInfo": "Sözleşme Bilgileri",
+  "hasContract": "Sözleşmeniz var mı?"
+},
   "recognitionUpload": {
     "back": "Geri Dön",
     "title": "Takdir ve Teşekkür Belgeleriniz",
@@ -207,12 +214,45 @@
     "uploadedFiles": "Yüklenen Belgeler",
     "continue": "Devam Et"
   },
+  "success": {
+    "title": "Başvurunuz Başarıyla Gönderildi",
+    "description": "Başvurunuz için teşekkür ederiz. Ekibimiz bilgilerinizi inceleyecek ve en kısa sürede sizinle iletişime geçecektir.",
+    "note": "Başvurunuzla ilgili ek bilgi veya güncellemeler için WhatsApp üzerinden sizinle iletişime geçeceğimizden, lütfen telefonunuzu ulaşılabilir durumda tutun."
+  },
+  "common": {
+    "back": "Geri Dön",
+    "show": "Göster",
+    "hide": "Gizle",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "showMore": "Devamını göster",
+    "showLess": "Daha az göster",
+    "continue": "Devam Et",
+    "yes": "Evet",
+    "no": "Hayır",
+    "loading":"Yükleniyor..."
+  },
+
+  "maritalStatus": {
+    "title": "Medeni Durum",
+    "subtitle": "Lütfen medeni durumunuz ile ilgili bilgileri doldurun",
+    "status": "Medeni durumunuz",
+    "single": "Bekar",
+    "married": "Evli",
+    "spouseName": "Eşinizin adı",
+    "spouseNamePlaceholder": "Eşinizin adını girin",
+    "hasChildren": "Çocuğunuz var mı?",
+    "childInfo": "Çocuk Bilgileri",
+    "childNamePlaceholder": "Çocuğunuzun adını girin",
+    "addChild": "Çocuk Ekle"
+  },
   "summary": {
     "back": "Geri Dön",
     "title": "Başvuru Özeti",
     "description": "Lütfen başvuru bilgilerinizi göndermeden önce kontrol edin",
     "edit": "Düzenle",
-    "submit": "Başvuruyu Gönder",
+    "addFiles": "Belge Ekle",
     "sections": {
       "contact": "İletişim Numarası",
       "personalInfo": "Kişisel Bilgiler",
@@ -220,24 +260,107 @@
       "passport": "Pasaport Belgeleri",
       "employment": "İstihdam Belgeleri",
       "recognition": "Takdir Belgeleri",
-      "payment": "Ödeme Kayıtları"
+      "payment": "Ödeme Kayıtları",
+      "marital": {
+        "title": "Medeni Durum Bilgileri"
+      },
+      "employments": {
+        "title": "İş Bilgileri"
+      },
+      "workConditions": {
+        "title": "Çalışma Şartları"
+      },
+      "postEmployment": {
+        "title": "Dönüş Sonrası İş Bilgileri"
+      },
+      "evidenceWitness": {
+        "title": "Kanıtlar ve Tanıklar"
+      }
     },
     "filesUploaded": "{{count}} dosya yüklendi",
-    "noDocuments": "Belge yüklenmedi"
+    "noDocuments": "Belge yüklenmedi",
+    "subtitle": "Lütfen bilgilerinizi kontrol edin ve formu gönderin",
+    "submit": "Formu Gönder"
   },
-  "success": {
-    "title": "Başvurunuz Başarıyla Gönderildi",
-    "description": "Başvurunuz için teşekkür ederiz. Ekibimiz bilgilerinizi inceleyecek ve en kısa sürede sizinle iletişime geçecektir.",
-    "note": "Başvurunuzla ilgili ek bilgi veya güncellemeler için WhatsApp üzerinden sizinle iletişime geçeceğimizden, lütfen telefonunuzu ulaşılabilir durumda tutun."
+  "submissionComplete": {
+    "title": "Başvurunuz Alındı",
+    "message": "Formunuz başarıyla gönderildi. Süreç hakkında size bilgi vereceğiz.",
+    "nextSteps": "Başvurunuz incelendikten sonra size WhatsApp üzerinden bilgi verilecektir.",
+    "reference": "Başvuru Referans Numaranız:"
   },
-  "common": {
-    "back":"Geri Dön",
-    "show": "Göster",
-    "hide": "Gizle",
-    "save": "Kaydet",
-    "cancel": "İptal",
-    "delete": "Sil",
-    "showMore": "Devamını göster",
-    "showLess": "Daha az göster"
+  "languageSelector": {
+    "title": "Hoş Geldiniz",
+    "subtitle": "Lütfen devam etmek için dilinizi seçin",
+    "continue": "Devam Et"
+  },
+
+  "whatsapp": {
+    "title": "WhatsApp Doğrulama",
+    "subtitle": "Lütfen başvurunuzda kullandığınız WhatsApp numaranızı girin",
+    "continue": "Devam Et",
+    "enterOTP": "Doğrulama Kodu",
+    "otpSubtitle": "WhatsApp üzerinden gönderilen 4 haneli kodu girin",
+    "timeRemaining": "Kalan süre: {{seconds}} saniye",
+    "resendOTP": "Kodu tekrar gönder",
+    "back": "Geri Dön",
+    "description": "WhatsApp doğrulama kodu almak için lütfen telefon numaranızı girin",
+    "phoneLabel": "Telefon Numarası",
+    "otpTitle": "Doğrulama Kodunu Girin",
+    "otpDescription": "WhatsApp'ınıza 4 haneli bir kod gönderdik",
+    "sentTo": "Kod gönderilen numara",
+    "otpValidity": "Kodun geçerlilik süresi",
+    "verify": "Kodu Doğrula"
+  },
+  "evidenceWitness": {
+  "title": "Kanıtlar ve Tanıklar",
+  "subtitle": "Lütfen davanızı destekleyecek kanıtları ve tanıkları ekleyin",
+  "evidence": {
+    "title": "Kanıtlar",
+    "linkTitle": "Kanıt Linki",
+    "urlPlaceholder": "URL adresini girin (örn. https://...)",
+    "descriptionPlaceholder": "Bu kanıtın açıklamasını girin",
+    "addLink": "Yeni Link Ekle"
+  },
+  "witnesses": {
+    "title": "Tanıklar",
+    "hasWitnesses": "Tanıklarınız var mı?",
+    "witnessInfo": "Tanık Bilgileri",
+    "firstName": "Adı",
+    "lastName": "Soyadı",
+    "addWitness": "Yeni Tanık Ekle"
   }
+},
+"workConditions": {
+  "title": "Çalışma Koşulları",
+  "subtitle": "Lütfen çalışma koşullarınızla ilgili bilgileri girin",
+  "schedule": "Çalışma Programı",
+  "dailyHours": "Günlük çalışma saati",
+  "weeklyDays": "Haftada kaç gün çalıştınız",
+  "lastWorkDate": "Son Çalışma Tarihiniz",
+  "supervisor": "Amirinizin adı",
+  "basesPlaceholder": "Çalıştığınız üsleri veya konumları belirtin",
+  "loa": {
+    "title": "İzin Belgesi (LOA)",
+    "subtitle": "Eğer varsa, izin belgelerinizi (Letter of Authorization) yükleyin"
+  }
+},
+"postEmployment": {
+  "title": "İş Sonrası Durum",
+  "subtitle": "Üslerden döndükten sonraki iş durumunuz hakkında bilgi verin",
+  "hasWorked": "Üslerden döndükten sonra herhangi bir işte çalıştınız mı?",
+  "previousEmployment": {
+    "title": "Önceki İş Bilgileri",
+    "companyName": "Şirket adı",
+    "startDate": "Başlangıç tarihi",
+    "endDate": "Bitiş tarihi",
+    "add": "Yeni İş Ekle"
+  },
+  "currentEmployment": {
+    "title": "Mevcut İş Durumu",
+    "isWorking": "Şu anda çalışıyor musunuz?",
+    "companyName": "Çalıştığınız şirketin adı",
+    "currentSalary": "Şu anki maaşınız",
+    "lastSalary": "Son işinizdeki maaşınız"
+  }
+}
 }

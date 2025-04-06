@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, AlertCircle, ChevronRight } from "lucide-react";
-import { uploadFirestorage } from "../../../utils/firebase";
+import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
-import { useAppSelector } from "../../../store/hooks";
 
 interface PassportUploadProps {
   onBack: () => void;
@@ -21,57 +20,50 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileUrls, setFileUrls] = useState<any>(); 
-  
-    const applicatorData=useAppSelector((state)=>state.applicator.applicatorData);
-  
 
-
-
-  const handleSaveStep3 = async() => {
+  const handleSaveStep3 = async (urls: string[]) => {
     const data = {
       step: 3,
       section: "passport",
       data: {
-        employmentFiles: fileUrls,
+        employmentFiles: urls,
       },
     };
 
     await updatePreApplicationSection(data);
   };
 
+  const handleUploadAll = async (): Promise<string[]> => {
+    const uploadedFileKeys: string[] = [];
 
+    for (const file of files) {
+      try {
+        const { fileKey } = await uploadFileToS3(
+          file,
+          file.name,
+          file.type,
+          folder
+        );
+        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
+        uploadedFileKeys.push(fileKey);
+      } catch (err) {
+        console.error("Error uploading file:", file.name, err);
+        setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
+      }
+    }
+    // İstersen burada da files'ı temizleyebilirsin.
+    setFiles([]);
+    return uploadedFileKeys;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length > 0) {
-      await handleSave();
-      onContinue(files);
-    }
-  };
-
-  const handleSave = async (exitAfterSave: boolean = false) => {
-    setSaving(true);
-
-    try {
-      // Example of how you might handle uploading multiple files
-      const uploadPromises = files.map(async (file) => {
-        const fileUrl = await uploadFirestorage(file, folder, applicatorData.application.id);
-        return { file, url: fileUrl };
-      });
-
-      const uploadResults = await Promise.all(uploadPromises);
-      setFileUrls(uploadResults);
-
-      await handleSaveStep3();
-      if (exitAfterSave) {
-        onContinue(files);
-      }
-    } catch (error) {
-      console.error("Error saving data:", error);
-      setError("An error occurred while saving files");
-    } finally {
+      setSaving(true);
+      const uploadedUrls = await handleUploadAll(); // handleUploadAll'u güncelleyelim
+      await handleSaveStep3(uploadedUrls);
       setSaving(false);
+      onContinue(files);
     }
   };
 
@@ -112,6 +104,13 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
             label="Passport"
             allowedTypes={[
               "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.ms-excel",
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-powerpoint",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.ms-access",
               "image/jpeg",
               "image/png",
               "image/jpg",

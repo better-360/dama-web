@@ -42,10 +42,6 @@ export const updateApplicatorProfile = async (data:UpdateApplicatorData): Promis
   return response.data;
 };
 
-
-
-
-
 export const updatePreApplicationSection = async (data: {
   section: string;
   step: number;
@@ -73,6 +69,18 @@ export const updateApplicationSection = async (data: {
     );
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response.data.message);
+    console.error("Error updating application section:", error);
+    throw new Error(error);
   }
 };
+
+
+export const getApplicationData = async () => {
+  try {
+    const response = await instance.get(`applications/my-applications`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching application data:", error);
+    throw new Error(error);
+  }
+}

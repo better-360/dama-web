@@ -81,18 +81,7 @@
     "continue": "I Have the Documents, Continue",
     "note": "All documents will be stored securely and used only for your application."
   },
-  "whatsapp": {
-    "back": "Go Back",
-    "title": "Phone Verification",
-    "description": "Please enter your phone number to receive a WhatsApp verification code",
-    "phoneLabel": "Phone Number",
-    "continue": "Continue",
-    "otpTitle": "Enter Verification Code",
-    "otpDescription": "We've sent a 4-digit code to your WhatsApp",
-    "sentTo": "Code sent to",
-    "otpValidity": "Code valid for",
-    "verify": "Verify Code"
-  },
+
   "contactInfo": {
     "back": "Go Back",
     "title": "Contact Information",
@@ -164,6 +153,25 @@
     "uploadedFiles": "Uploaded Documents",
     "continue": "Continue"
   },
+  "employment": {
+    "employerInfo": "Employer Information",
+    "title": "Employment Information",
+    "subtitle": "Please fill in your employment information",
+    "employerName": "Employer Name",
+    "employerNamePlaceholder": "Enter your employer's name",
+    "position": "Position",
+    "positionPlaceholder": "Enter your position",
+    "salary": "Salary",
+    "paymentInfo": "Payment Information",
+    "isContractor": "Are you a contractor?",
+    "paymentType": "Payment Type",
+    "singleCompany": "Single Company",
+    "multipleCompanies": "Multiple Companies",
+    "totalCompensation": "Total Compensation",
+    "totalCompensationPlaceholder": "Enter your total compensation",
+    "contractInfo": "Contract Information",
+    "hasContract": "Do you have a contract?"
+  },
   "recognitionUpload": {
     "back": "Go Back",
     "title": "Recognition Documents",
@@ -208,12 +216,29 @@
     "continue": "Continue"
   },
   "summary": {
-    "back": "Go Back",
     "title": "Application Summary",
-    "description": "Please review your application details before submitting",
+    "subtitle": "Please review your information and submit the form",
     "edit": "Edit",
-    "submit": "Submit Application",
+    "submit": "Submit Form",
+    "back": "Go Back",
+    "addFiles": "Add Files",
+    "description": "Please review your application details before submitting",
     "sections": {
+      "marital": {
+        "title": "Marital Status Information"
+      },
+      "employments": {
+        "title": "Employment Information"
+      },
+      "workConditions": {
+        "title": "Work Conditions"
+      },
+      "postEmployment": {
+        "title": "Post-Return Employment"
+      },
+      "evidenceWitness": {
+        "title": "Evidence and Witnesses"
+      },
       "contact": "Contact Number",
       "personalInfo": "Personal Information",
       "incident": "Incident Description",
@@ -238,6 +263,106 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "continue": "Continue",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading..."
+  },
+  "languageSelector": {
+    "title": "Welcome",
+    "subtitle": "Please select your language to continue",
+    "continue": "Continue"
+  },
+  "whatsapp": {
+    "back": "Go Back",
+    "description": "Please enter your phone number to receive a WhatsApp verification code",
+    "phoneLabel": "Phone Number",
+    "otpTitle": "Enter Verification Code",
+    "otpDescription": "We've sent a 4-digit code to your WhatsApp",
+    "sentTo": "Code sent to",
+    "otpValidity": "Code valid for",
+    "verify": "Verify Code",
+    "title": "WhatsApp Verification",
+    "subtitle": "Please enter your WhatsApp number used in your application",
+    "continue": "Continue",
+    "enterOTP": "Verification Code",
+    "otpSubtitle": "Enter the 4-digit code sent via WhatsApp",
+    "timeRemaining": "Time remaining: {{seconds}} seconds",
+    "resendOTP": "Resend code"
+  },
+  "maritalStatus": {
+    "title": "Marital Status",
+    "subtitle": "Please fill in your marital status information",
+    "status": "Your marital status",
+    "single": "Single",
+    "married": "Married",
+    "spouseName": "Spouse's name",
+    "spouseNamePlaceholder": "Enter your spouse's name",
+    "hasChildren": "Do you have children?",
+    "childInfo": "Child Information",
+    "childNamePlaceholder": "Enter child's name",
+    "addChild": "Add Child"
+  },
+  "submissionComplete": {
+    "title": "Application Received",
+    "message": "Your form has been successfully submitted. We will keep you informed about the process.",
+    "nextSteps": "After reviewing your application, we will contact you via WhatsApp.",
+    "reference": "Your Application Reference Number:"
+  },
+
+"evidenceWitness": {
+    "title": "Evidence and Witnesses",
+    "subtitle": "Please add evidence and witnesses that support your case",
+    "evidence": {
+      "title": "Evidence",
+      "linkTitle": "Evidence Link",
+      "urlPlaceholder": "Enter URL (e.g. https://...)",
+      "descriptionPlaceholder": "Enter a description for this evidence",
+      "addLink": "Add New Link"
+    },
+    "witnesses": {
+      "title": "Witnesses",
+      "hasWitnesses": "Do you have witnesses?",
+      "witnessInfo": "Witness Information",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "addWitness": "Add New Witness"
+    }
+  },
+
+  "workConditions": {
+  "title": "Working Conditions",
+  "subtitle": "Please provide information about your working conditions",
+  "schedule": "Work Schedule",
+  "dailyHours": "Hours worked per day",
+  "weeklyDays": "Days worked per week",
+  "lastWorkDate": "Last Date of Work",
+  "supervisor": "Supervisor's name",
+  "basesPlaceholder": "Specify the bases or locations where you worked",
+  "loa": {
+    "title": "Letter of Authorization (LOA)",
+    "subtitle": "Upload your Letter of Authorization document if you have one"
   }
+},
+
+"postEmployment": {
+  "title": "Post-Employment Status",
+  "subtitle": "Provide information about your employment after returning from the bases",
+  "hasWorked": "Have you worked anywhere since returning from the bases?",
+  "previousEmployment": {
+    "title": "Previous Employment Information",
+    "companyName": "Company name",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "add": "Add Previous Job"
+  },
+  "currentEmployment": {
+    "title": "Current Employment Status",
+    "isWorking": "Are you currently employed?",
+    "companyName": "Current company name",
+    "currentSalary": "Current salary",
+    "lastSalary": "Salary at last job"
+  }
+}
 }

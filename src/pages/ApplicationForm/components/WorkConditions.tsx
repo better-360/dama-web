@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Clock, Upload } from 'lucide-react';
+import { ChevronLeft, Clock } from 'lucide-react';
 import { updateApplicationSection } from '../../../http/requests/applicator';
+import { uploadFileToS3 } from '../../../utils/firebase';
+import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
 
 interface WorkConditionsInfo {
   dailyHours: string;
@@ -19,14 +21,50 @@ interface WorkConditionsProps {
 
 const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) => {
   const { t } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<WorkConditionsInfo>({
     dailyHours: '',
     weeklyDays: '',
     lastWorkDate: '',
     supervisorName: '',
     bases: '',
+    loaFile: undefined,
   });
+
+  const folder = "loa-files";
+  const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
+  
+    useEffect(() => {
+      setFormData((prev) => ({
+        ...prev,
+        loaFile: files[0],
+      }));
+    }
+    , [files]);
+
+    const handleUploadAll = async (): Promise<string[]> => {
+      const uploadedFileKeys: string[] = [];
+  
+      for (const file of files) {
+        try {
+          const { fileKey } = await uploadFileToS3(
+            file,
+            file.name,
+            file.type,
+            folder
+          );
+          // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
+          uploadedFileKeys.push(fileKey);
+        } catch (err) {
+          console.error("Error uploading file:", file.name, err);
+          setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
+        }
+      }
+      // İstersen burada da files'ı temizleyebilirsin.
+      setFiles([]);
+      return uploadedFileKeys;
+    };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -36,19 +74,6 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) =>
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({
-        ...prev,
-        loaFile: file,
-      }));
-    }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
 
   const isFormValid = () => {
     const {
@@ -69,18 +94,24 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) =>
   };
 
 
-  const handleSaveStep3 = async() => {
+  const handleSaveStep3 = async(urls:string[]) => {
     const data = {
       step: 3,
       section: "workConditions",
-      data: formData,
+      data: {
+        ...formData,
+        loaFile: urls[0] || undefined,
+      }
     };
      await updateApplicationSection(data);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (isFormValid()) {
-      handleSaveStep3();
+      setSaving(true);
+      const uploadedUrls = await handleUploadAll();
+      handleSaveStep3(uploadedUrls);
+      setSaving(false);
       onComplete();
     }
   };
@@ -186,24 +217,26 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) =>
               </p>
             </div>
 
-            <div
-              onClick={handleUploadClick}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#292A2D] transition-all"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              />
-              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">
-                {formData.loaFile
-                  ? t('workConditions.loa.selectedFile', { name: formData.loaFile.name })
-                  : t('workConditions.loa.dragDrop')}
-              </p>
-            </div>
+            <MultiFileUploadComponent
+                    files={files}
+                    setFiles={setFiles}
+                    setError={setError}
+                    label="Loa File"
+                    allowedTypes={[
+                      "application/pdf",
+                      "application/msword",
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                      "application/vnd.ms-excel",
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      "application/vnd.ms-powerpoint",
+                      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                      "application/vnd.ms-access",
+                      "image/jpeg",
+                      "image/png",
+                      "image/jpg",
+                    ]}
+                  />
+            
           </div>
 
           <button

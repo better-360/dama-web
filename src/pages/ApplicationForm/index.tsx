@@ -8,11 +8,10 @@ import Summary from "./components/Summary";
 import SubmissionComplete from "./components/SubmissionComplete";
 import IntroPage from "./components/IntroPage";
 import RequirementsPage from "./components/RequirementsPage";
-import { useAppSelector } from "../../store/hooks";
 
 export default function ApplicationForm() {
-      const applicatorData=useAppSelector((state)=>state.applicator.applicatorData);
-  
+ 
+
   const [currentStep, setCurrentStep] = useState<
     | "intro"
     | "requirements"

@@ -9,6 +9,13 @@ interface Child {
   birthDate: string;
 }
 
+interface FormData {
+  maritalStatus: 'single' | 'married' | null;
+  spouseName: string;
+  hasChildren: boolean | null;
+  children: Child[];
+}
+
 interface MaritalStatusProps {
   onComplete: () => void;
   onBack: () => void;
@@ -19,40 +26,60 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
   onBack,
 }) => {
   const { t } = useTranslation();
-  const [maritalStatus, setMaritalStatus] = useState<
-    'single' | 'married' | null
-  >(null);
-  const [spouseName, setSpouseName] = useState('');
-  const [hasChildren, setHasChildren] = useState<boolean | null>(null);
-  const [children, setChildren] = useState<Child[]>([]);
+  
+  // Single formData state instead of multiple state variables
+  const [formData, setFormData] = useState<FormData>({
+    maritalStatus: null,
+    spouseName: '',
+    hasChildren: null,
+    children: []
+  });
 
-  const addChild = () => {
-    setChildren([
-      ...children,
-      { id: Date.now().toString(), name: '', birthDate: '' },
-    ]);
+  // Update a single field in the formData
+  const updateFormField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
+  // Add a new child to the children array
+  const addChild = () => {
+    setFormData(prev => ({
+      ...prev,
+      children: [
+        ...prev.children,
+        { id: Date.now().toString(), name: '', birthDate: '' }
+      ]
+    }));
+  };
+
+  // Update a specific child's field
   const updateChild = (id: string, field: keyof Child, value: string) => {
-    setChildren(
-      children.map((child) =>
+    setFormData(prev => ({
+      ...prev,
+      children: prev.children.map(child => 
         child.id === id ? { ...child, [field]: value } : child
       )
-    );
+    }));
   };
 
+  // Remove a child from the children array
   const removeChild = (id: string) => {
-    setChildren(children.filter((child) => child.id !== id));
+    setFormData(prev => ({
+      ...prev,
+      children: prev.children.filter(child => child.id !== id)
+    }));
   };
 
   const handleContinue = () => {
     if (
-      maritalStatus === 'single' ||
-      (maritalStatus === 'married' && spouseName)
+      formData.maritalStatus === 'single' ||
+      (formData.maritalStatus === 'married' && formData.spouseName)
     ) {
       if (
-        hasChildren === false ||
-        (hasChildren === true && children.length > 0)
+        formData.hasChildren === false ||
+        (formData.hasChildren === true && formData.children.length > 0)
       ) {
         handleSaveStep1();
         onComplete();
@@ -64,25 +91,19 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
     const data = {
       step: 1,
       section: "marital",
-      data: {
-        children: children,
-        spouseName: spouseName,
-        hasChildren: hasChildren,
-        maritalStatus: maritalStatus,
-      },
+      data: formData,
     };
     await updateApplicationSection(data);
   };
   
-
   const isFormValid = () => {
-    if (!maritalStatus) return false;
-    if (maritalStatus === 'married' && !spouseName) return false;
-    if (hasChildren === null) return false;
-    if (hasChildren && children.length === 0) return false;
+    if (!formData.maritalStatus) return false;
+    if (formData.maritalStatus === 'married' && !formData.spouseName) return false;
+    if (formData.hasChildren === null) return false;
+    if (formData.hasChildren && formData.children.length === 0) return false;
     if (
-      hasChildren &&
-      children.some((child) => !child.name || !child.birthDate)
+      formData.hasChildren &&
+      formData.children.some((child) => !child.name || !child.birthDate)
     )
       return false;
     return true;
@@ -117,9 +138,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setMaritalStatus('single')}
+                onClick={() => updateFormField('maritalStatus', 'single')}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                  maritalStatus === 'single'
+                  formData.maritalStatus === 'single'
                     ? 'bg-[#292A2D] text-white'
                     : 'bg-gray-50 hover:bg-gray-100 text-[#292A2D]'
                 }`}
@@ -127,9 +148,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('maritalStatus.single')}
               </button>
               <button
-                onClick={() => setMaritalStatus('married')}
+                onClick={() => updateFormField('maritalStatus', 'married')}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                  maritalStatus === 'married'
+                  formData.maritalStatus === 'married'
                     ? 'bg-[#292A2D] text-white'
                     : 'bg-gray-50 hover:bg-gray-100 text-[#292A2D]'
                 }`}
@@ -139,15 +160,15 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </div>
           </div>
 
-          {maritalStatus === 'married' && (
+          {formData.maritalStatus === 'married' && (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
                 {t('maritalStatus.spouseName')}
               </label>
               <input
                 type="text"
-                value={spouseName}
-                onChange={(e) => setSpouseName(e.target.value)}
+                value={formData.spouseName}
+                onChange={(e) => updateFormField('spouseName', e.target.value)}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                 placeholder={t('maritalStatus.spouseNamePlaceholder')}
               />
@@ -160,9 +181,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setHasChildren(true)}
+                onClick={() => updateFormField('hasChildren', true)}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                  hasChildren === true
+                  formData.hasChildren === true
                     ? 'bg-[#292A2D] text-white'
                     : 'bg-gray-50 hover:bg-gray-100 text-[#292A2D]'
                 }`}
@@ -170,9 +191,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('common.yes')}
               </button>
               <button
-                onClick={() => setHasChildren(false)}
+                onClick={() => updateFormField('hasChildren', false)}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                  hasChildren === false
+                  formData.hasChildren === false
                     ? 'bg-[#292A2D] text-white'
                     : 'bg-gray-50 hover:bg-gray-100 text-[#292A2D]'
                 }`}
@@ -182,9 +203,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </div>
           </div>
 
-          {hasChildren && (
+          {formData.hasChildren && (
             <div className="space-y-4">
-              {children.map((child) => (
+              {formData.children.map((child) => (
                 <div
                   key={child.id}
                   className="p-4 bg-gray-50 rounded-xl space-y-3"
