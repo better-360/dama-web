@@ -231,7 +231,8 @@
     "continue": "Devam Et",
     "yes": "Evet",
     "no": "Hayır",
-    "loading":"Yükleniyor..."
+    "loading":"Yükleniyor...",
+    "saving": "Kaydediliyor..."
   },
 
   "maritalStatus": {

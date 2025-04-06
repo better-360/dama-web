@@ -1,116 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Clock } from 'lucide-react';
-import { updateApplicationSection } from '../../../http/requests/applicator';
 import { uploadFileToS3 } from '../../../utils/firebase';
 import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
 
-interface WorkConditionsInfo {
+interface WorkConditionsData {
   dailyHours: string;
   weeklyDays: string;
   lastWorkDate: string;
   supervisorName: string;
   bases: string;
-  loaFile?: File;
+  loaFile?: string;
 }
 
 interface WorkConditionsProps {
+  formData: WorkConditionsData;
+  updateFormData: (data: Partial<WorkConditionsData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
-const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) => {
+const WorkConditions: React.FC<WorkConditionsProps> = ({ 
+  formData, 
+  updateFormData, 
+  onComplete,
+  onBack 
+}) => {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<WorkConditionsInfo>({
-    dailyHours: '',
-    weeklyDays: '',
-    lastWorkDate: '',
-    supervisorName: '',
-    bases: '',
-    loaFile: undefined,
-  });
-
   const folder = "loa-files";
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const [tempLoaFile, setTempLoaFile] = useState<File | undefined>(undefined);
   
-    useEffect(() => {
-      setFormData((prev) => ({
-        ...prev,
-        loaFile: files[0],
-      }));
-    }
-    , [files]);
+  useEffect(() => {
+    setTempLoaFile(files[0]);
+  }, [files]);
 
-    const handleUploadAll = async (): Promise<string[]> => {
-      const uploadedFileKeys: string[] = [];
-  
-      for (const file of files) {
-        try {
-          const { fileKey } = await uploadFileToS3(
-            file,
-            file.name,
-            file.type,
-            folder
-          );
-          // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
-          uploadedFileKeys.push(fileKey);
-        } catch (err) {
-          console.error("Error uploading file:", file.name, err);
-          setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
-        }
+  const handleUploadAll = async (): Promise<string[]> => {
+    const uploadedFileKeys: string[] = [];
+
+    for (const file of files) {
+      try {
+        const { fileKey } = await uploadFileToS3(
+          file,
+          file.name,
+          file.type,
+          folder
+        );
+        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
+        uploadedFileKeys.push(fileKey);
+      } catch (err) {
+        console.error("Error uploading file:", file.name, err);
+        setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
-      // İstersen burada da files'ı temizleyebilirsin.
-      setFiles([]);
-      return uploadedFileKeys;
-    };
+    }
+    // İstersen burada da files'ı temizleyebilirsin.
+    setFiles([]);
+    return uploadedFileKeys;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    updateFormData({ [name]: value });
   };
-
 
   const isFormValid = () => {
-    const {
-      dailyHours,
-      weeklyDays,
-      lastWorkDate,
-      supervisorName,
-      bases,
-    } = formData;
-
     return (
-      dailyHours &&
-      weeklyDays &&
-      lastWorkDate &&
-      supervisorName &&
-      bases
+      formData.dailyHours &&
+      formData.weeklyDays &&
+      formData.lastWorkDate &&
+      formData.supervisorName &&
+      formData.bases
     );
-  };
-
-
-  const handleSaveStep3 = async(urls:string[]) => {
-    const data = {
-      step: 3,
-      section: "workConditions",
-      data: {
-        ...formData,
-        loaFile: urls[0] || undefined,
-      }
-    };
-     await updateApplicationSection(data);
   };
 
   const handleContinue = async () => {
     if (isFormValid()) {
       setSaving(true);
-      const uploadedUrls = await handleUploadAll();
-      handleSaveStep3(uploadedUrls);
+      
+      // Only upload if there are new files
+      if (files.length > 0) {
+        const uploadedUrls = await handleUploadAll();
+        updateFormData({ loaFile: uploadedUrls[0] || undefined });
+      }
+      
       setSaving(false);
       onComplete();
     }
@@ -217,36 +191,55 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({ onComplete,onBack }) =>
               </p>
             </div>
 
+            {formData.loaFile && (
+              <div className="mb-2 p-2 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 truncate">
+                    {formData.loaFile.split('/').pop() || 'LOA file'}
+                  </span>
+                  <button
+                    onClick={() => updateFormData({ loaFile: undefined })}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+
             <MultiFileUploadComponent
-                    files={files}
-                    setFiles={setFiles}
-                    setError={setError}
-                    label="Loa File"
-                    allowedTypes={[
-                      "application/pdf",
-                      "application/msword",
-                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                      "application/vnd.ms-excel",
-                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      "application/vnd.ms-powerpoint",
-                      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                      "application/vnd.ms-access",
-                      "image/jpeg",
-                      "image/png",
-                      "image/jpg",
-                    ]}
-                  />
-            
+              files={files}
+              setFiles={setFiles}
+              setError={setError}
+              label="Loa File"
+              allowedTypes={[
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.ms-access",
+                "image/jpeg",
+                "image/png",
+                "image/jpg",
+              ]}
+            />
           </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg">
+              {error}
+            </div>
+          )}
 
           <button
             onClick={handleContinue}
-            disabled={!isFormValid()}
-            className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disable
-
-d:cursor-not-allowed"
+            disabled={!isFormValid() || saving}
+            className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('common.continue')}
+            {saving ? t('common.saving') : t('common.continue')}
           </button>
         </div>
       </div>

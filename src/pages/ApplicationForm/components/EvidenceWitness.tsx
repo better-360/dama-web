@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, FileText, Plus, X, Link as LinkIcon } from 'lucide-react';
-import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface Witness {
   id: string;
@@ -15,83 +14,73 @@ interface EvidenceLink {
   description: string;
 }
 
-interface EvidenceWitnessInfo {
+interface EvidenceWitnessData {
   evidenceLinks: EvidenceLink[];
   hasWitnesses: boolean | null;
   witnesses: Witness[];
 }
 
 interface EvidenceWitnessProps {
+  formData: EvidenceWitnessData;
+  updateFormData: (data: Partial<EvidenceWitnessData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
-const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ onComplete, onBack }) => {
+const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ 
+  formData, 
+  updateFormData, 
+  onComplete, 
+  onBack 
+}) => {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<EvidenceWitnessInfo>({
-    evidenceLinks: [],
-    hasWitnesses: null,
-    witnesses: [],
-  });
 
   const addEvidenceLink = () => {
-    setFormData(prev => ({
-      ...prev,
-      evidenceLinks: [
-        ...prev.evidenceLinks,
-        {
-          id: Date.now().toString(),
-          url: '',
-          description: '',
-        },
-      ],
-    }));
+    const newEvidenceLinks = [
+      ...formData.evidenceLinks,
+      {
+        id: Date.now().toString(),
+        url: '',
+        description: '',
+      },
+    ];
+    updateFormData({ evidenceLinks: newEvidenceLinks });
   };
 
   const updateEvidenceLink = (id: string, field: keyof EvidenceLink, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      evidenceLinks: prev.evidenceLinks.map(link =>
-        link.id === id ? { ...link, [field]: value } : link
-      ),
-    }));
+    const updatedLinks = formData.evidenceLinks.map(link =>
+      link.id === id ? { ...link, [field]: value } : link
+    );
+    updateFormData({ evidenceLinks: updatedLinks });
   };
 
   const removeEvidenceLink = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      evidenceLinks: prev.evidenceLinks.filter(link => link.id !== id),
-    }));
+    const filteredLinks = formData.evidenceLinks.filter(link => link.id !== id);
+    updateFormData({ evidenceLinks: filteredLinks });
   };
 
   const addWitness = () => {
-    setFormData(prev => ({
-      ...prev,
-      witnesses: [
-        ...prev.witnesses,
-        {
-          id: Date.now().toString(),
-          firstName: '',
-          lastName: '',
-        },
-      ],
-    }));
+    const newWitnesses = [
+      ...formData.witnesses,
+      {
+        id: Date.now().toString(),
+        firstName: '',
+        lastName: '',
+      },
+    ];
+    updateFormData({ witnesses: newWitnesses });
   };
 
   const updateWitness = (id: string, field: keyof Witness, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      witnesses: prev.witnesses.map(witness =>
-        witness.id === id ? { ...witness, [field]: value } : witness
-      ),
-    }));
+    const updatedWitnesses = formData.witnesses.map(witness =>
+      witness.id === id ? { ...witness, [field]: value } : witness
+    );
+    updateFormData({ witnesses: updatedWitnesses });
   };
 
   const removeWitness = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      witnesses: prev.witnesses.filter(witness => witness.id !== id),
-    }));
+    const filteredWitnesses = formData.witnesses.filter(witness => witness.id !== id);
+    updateFormData({ witnesses: filteredWitnesses });
   };
 
   const isFormValid = () => {
@@ -102,21 +91,8 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ onComplete, onBack })
     return true;
   };
 
-
-  const handleSaveStep5 = async() => {
-    const data = {
-      step: 5,
-      section: "evidenceWitness",
-      data: formData,
-    };
-     await updateApplicationSection(data);
-  };
-  
-
-
   const handleContinue = () => {
     if (isFormValid()) {
-      handleSaveStep5();
       onComplete();
     }
   };
@@ -207,7 +183,7 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ onComplete, onBack })
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, hasWitnesses: true }))}
+                  onClick={() => updateFormData({ hasWitnesses: true })}
                   className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                     formData.hasWitnesses === true
                       ? 'bg-[#292A2D] text-white'
@@ -218,7 +194,7 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ onComplete, onBack })
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, hasWitnesses: false }))}
+                  onClick={() => updateFormData({ hasWitnesses: false })}
                   className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                     formData.hasWitnesses === false
                       ? 'bg-[#292A2D] text-white'

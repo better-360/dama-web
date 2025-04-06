@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Briefcase, Plus, X } from 'lucide-react';
-import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface PreviousJob {
   id: string;
@@ -10,7 +9,7 @@ interface PreviousJob {
   endDate: string;
 }
 
-interface PostEmploymentInfo {
+interface PostEmploymentData {
   hasWorked: boolean | null;
   previousJobs: PreviousJob[];
   isCurrentlyWorking: boolean | null;
@@ -20,55 +19,48 @@ interface PostEmploymentInfo {
 }
 
 interface PostEmploymentProps {
+  formData: PostEmploymentData;
+  updateFormData: (data: Partial<PostEmploymentData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
-const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) => {
+const PostEmployment: React.FC<PostEmploymentProps> = ({ 
+  formData, 
+  updateFormData, 
+  onComplete, 
+  onBack 
+}) => {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<PostEmploymentInfo>({
-    hasWorked: null,
-    previousJobs: [],
-    isCurrentlyWorking: null,
-  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    updateFormData({ [name]: value });
   };
 
   const addPreviousJob = () => {
-    setFormData(prev => ({
-      ...prev,
-      previousJobs: [
-        ...prev.previousJobs,
-        {
-          id: Date.now().toString(),
-          companyName: '',
-          startDate: '',
-          endDate: '',
-        },
-      ],
-    }));
+    const newPreviousJobs = [
+      ...formData.previousJobs,
+      {
+        id: Date.now().toString(),
+        companyName: '',
+        startDate: '',
+        endDate: '',
+      },
+    ];
+    updateFormData({ previousJobs: newPreviousJobs });
   };
 
   const updatePreviousJob = (id: string, field: keyof PreviousJob, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      previousJobs: prev.previousJobs.map(job =>
-        job.id === id ? { ...job, [field]: value } : job
-      ),
-    }));
+    const updatedJobs = formData.previousJobs.map(job =>
+      job.id === id ? { ...job, [field]: value } : job
+    );
+    updateFormData({ previousJobs: updatedJobs });
   };
 
   const removePreviousJob = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      previousJobs: prev.previousJobs.filter(job => job.id !== id),
-    }));
+    const filteredJobs = formData.previousJobs.filter(job => job.id !== id);
+    updateFormData({ previousJobs: filteredJobs });
   };
 
   const isFormValid = () => {
@@ -83,19 +75,8 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) =
     return true;
   };
 
-
-  const handleSaveStep4 = async() => {
-    const data = {
-      step: 4,
-      section: "postEmployment",
-      data: formData,
-    }
-     await updateApplicationSection(data);
-  };
-  
   const handleContinue = () => {
     if (isFormValid()) {
-      handleSaveStep4();
       onComplete();
     }
   };
@@ -131,7 +112,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) =
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, hasWorked: true }))}
+                onClick={() => updateFormData({ hasWorked: true })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasWorked === true
                     ? 'bg-[#292A2D] text-white'
@@ -142,7 +123,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) =
               </button>
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, hasWorked: false }))}
+                onClick={() => updateFormData({ hasWorked: false })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasWorked === false
                     ? 'bg-[#292A2D] text-white'
@@ -233,7 +214,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) =
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, isCurrentlyWorking: true }))}
+                      onClick={() => updateFormData({ isCurrentlyWorking: true })}
                       className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                         formData.isCurrentlyWorking === true
                           ? 'bg-[#292A2D] text-white'
@@ -244,7 +225,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({ onComplete, onBack }) =
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, isCurrentlyWorking: false }))}
+                      onClick={() => updateFormData({ isCurrentlyWorking: false })}
                       className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                         formData.isCurrentlyWorking === false
                           ? 'bg-[#292A2D] text-white'

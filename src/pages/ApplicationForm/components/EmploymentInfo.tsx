@@ -1,28 +1,45 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Briefcase } from "lucide-react";
-import { updateApplicationSection } from "../../../http/requests/applicator";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { uploadFileToS3 } from "../../../utils/firebase";
 
-interface EmploymentInfo {
+interface EmploymentData {
   employerName: string;
   position: string;
-  startDate: string;
   salary: string;
-  isContractor: boolean | null;
-  isMultiplePayments: boolean | null;
-  totalCompensation: string;
+  startDate: string;
   hasContract: boolean | null;
-  contractFile?: File;
+  contractFile: string|undefined;
+  isContractor: boolean;
+  totalCompensation: string;
+  isMultiplePayments: boolean;
 }
 
+
+// Define a type for the updateFormData function to avoid type mismatch
+type UpdateFormDataFn = (data: Partial<{
+  employerName: string;
+  position: string;
+  salary: string;
+  startDate: string;
+  hasContract: boolean | null;
+  contractFile: string|undefined;
+  isContractor: boolean;
+  totalCompensation: string;
+  isMultiplePayments: boolean;
+}>) => void;
+
 interface EmploymentInfoProps {
+  formData: EmploymentData;
+  updateFormData: UpdateFormDataFn;
   onComplete: () => void;
   onBack: () => void;
 }
 
 const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
+  formData,
+  updateFormData,
   onComplete,
   onBack,
 }) => {
@@ -30,17 +47,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<EmploymentInfo>({
-    employerName: "",
-    position: "",
-    startDate: "",
-    salary: "",
-    isContractor: null,
-    isMultiplePayments: null,
-    totalCompensation: "",
-    hasContract: null,
-    contractFile: undefined,
-  });
+  // Local temporary file state (not stored in central state until upload)
+  const [tempContractFile, setTempContractFile] = useState<File | undefined>(undefined);
 
   const folder = "contracts";
 
@@ -69,63 +77,37 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    updateFormData({ [name]: value });
   };
 
   const isFormValid = () => {
-    const {
-      employerName,
-      position,
-      startDate,
-      salary,
-      isContractor,
-      isMultiplePayments,
-      totalCompensation,
-      hasContract,
-      contractFile,
-    } = formData;
-
     return (
-      employerName &&
-      position &&
-      startDate &&
-      salary &&
-      isContractor !== null &&
-      isMultiplePayments !== null &&
-      totalCompensation &&
-      hasContract !== null &&
-      (hasContract === false || (hasContract === true && contractFile))
+      formData.employerName &&
+      formData.position &&
+      formData.startDate &&
+      formData.salary &&
+      formData.isContractor !== null &&
+      formData.isMultiplePayments !== null &&
+      formData.totalCompensation &&
+      formData.hasContract !== null &&
+      (formData.hasContract === false || (formData.hasContract === true && (formData.contractFile || tempContractFile)))
     );
   };
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      contractFile: files[0],
-    }));
-  }
-  , [files]);
-
-  const handleSaveStep2 = async (urls: string[]) => {
-    const data = {
-      step: 2,
-      section: "employment",
-      data: {
-        ...formData,
-        contractFile: urls[0] || "",
-      },
-    };
-    await updateApplicationSection(data);
-  };
+    setTempContractFile(files[0]);
+  }, [files]);
 
   const handleContinue = async () => {
     if (isFormValid()) {
       setSaving(true);
-      const uploadedUrls = await handleUploadAll();
-      handleSaveStep2(uploadedUrls);
+      
+      // Only upload if there are new files
+      if (files.length > 0) {
+        const uploadedUrls = await handleUploadAll();
+        updateFormData({ contractFile: uploadedUrls[0] || "" });
+      }
+      
       setSaving(false);
       onComplete();
     }
@@ -217,9 +199,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, isContractor: true }))
-                    }
+                    onClick={() => updateFormData({ isContractor: true })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.isContractor === true
                         ? "bg-[#292A2D] text-white"
@@ -230,9 +210,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, isContractor: false }))
-                    }
+                    onClick={() => updateFormData({ isContractor: false })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.isContractor === false
                         ? "bg-[#292A2D] text-white"
@@ -251,12 +229,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        isMultiplePayments: false,
-                      }))
-                    }
+                    onClick={() => updateFormData({ isMultiplePayments: false })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.isMultiplePayments === false
                         ? "bg-[#292A2D] text-white"
@@ -267,12 +240,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        isMultiplePayments: true,
-                      }))
-                    }
+                    onClick={() => updateFormData({ isMultiplePayments: true })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.isMultiplePayments === true
                         ? "bg-[#292A2D] text-white"
@@ -314,9 +282,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, hasContract: true }))
-                    }
+                    onClick={() => updateFormData({ hasContract: true })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.hasContract === true
                         ? "bg-[#292A2D] text-white"
@@ -327,9 +293,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, hasContract: false }))
-                    }
+                    onClick={() => updateFormData({ hasContract: false })}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                       formData.hasContract === false
                         ? "bg-[#292A2D] text-white"
@@ -342,6 +306,23 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               </div>
 
               {formData.hasContract && (
+                <div>
+                  {formData.contractFile && (
+                    <div className="mb-2 p-2 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600 truncate">
+                          {formData.contractFile.split('/').pop() || 'Contract file'}
+                        </span>
+                        <button
+                          onClick={() => updateFormData({ contractFile: '' })}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
                   <MultiFileUploadComponent
                     files={files}
                     setFiles={setFiles}
@@ -361,16 +342,23 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                       "image/jpg",
                     ]}
                   />
+                </div>
               )}
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <button
             onClick={handleContinue}
-            disabled={!isFormValid()}
+            disabled={!isFormValid() || saving}
             className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("common.continue")}
+            {saving ? t("common.saving") : t("common.continue")}
           </button>
         </div>
       </div>

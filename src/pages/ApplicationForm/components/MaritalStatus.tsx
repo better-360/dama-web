@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Users, Plus, X } from 'lucide-react';
-import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface Child {
   id: string;
@@ -9,7 +8,7 @@ interface Child {
   birthDate: string;
 }
 
-interface FormData {
+interface MaritalData {
   maritalStatus: 'single' | 'married' | null;
   spouseName: string;
   hasChildren: boolean | null;
@@ -17,59 +16,46 @@ interface FormData {
 }
 
 interface MaritalStatusProps {
+  formData: MaritalData;
+  updateFormData: (data: Partial<MaritalData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
 const MaritalStatus: React.FC<MaritalStatusProps> = ({
+  formData,
+  updateFormData,
   onComplete,
   onBack,
 }) => {
   const { t } = useTranslation();
   
-  // Single formData state instead of multiple state variables
-  const [formData, setFormData] = useState<FormData>({
-    maritalStatus: null,
-    spouseName: '',
-    hasChildren: null,
-    children: []
-  });
-
   // Update a single field in the formData
-  const updateFormField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const updateField = <K extends keyof MaritalData>(field: K, value: MaritalData[K]) => {
+    updateFormData({ [field]: value });
   };
 
   // Add a new child to the children array
   const addChild = () => {
-    setFormData(prev => ({
-      ...prev,
-      children: [
-        ...prev.children,
-        { id: Date.now().toString(), name: '', birthDate: '' }
-      ]
-    }));
+    const newChildren = [
+      ...formData.children,
+      { id: Date.now().toString(), name: '', birthDate: '' }
+    ];
+    updateField('children', newChildren);
   };
 
   // Update a specific child's field
   const updateChild = (id: string, field: keyof Child, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      children: prev.children.map(child => 
-        child.id === id ? { ...child, [field]: value } : child
-      )
-    }));
+    const updatedChildren = formData.children.map(child => 
+      child.id === id ? { ...child, [field]: value } : child
+    );
+    updateField('children', updatedChildren);
   };
 
   // Remove a child from the children array
   const removeChild = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      children: prev.children.filter(child => child.id !== id)
-    }));
+    const filteredChildren = formData.children.filter(child => child.id !== id);
+    updateField('children', filteredChildren);
   };
 
   const handleContinue = () => {
@@ -81,19 +67,9 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
         formData.hasChildren === false ||
         (formData.hasChildren === true && formData.children.length > 0)
       ) {
-        handleSaveStep1();
         onComplete();
       }
     }
-  };
-
-  const handleSaveStep1 = async () => {
-    const data = {
-      step: 1,
-      section: "marital",
-      data: formData,
-    };
-    await updateApplicationSection(data);
   };
   
   const isFormValid = () => {
@@ -138,7 +114,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => updateFormField('maritalStatus', 'single')}
+                onClick={() => updateField('maritalStatus', 'single')}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.maritalStatus === 'single'
                     ? 'bg-[#292A2D] text-white'
@@ -148,7 +124,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('maritalStatus.single')}
               </button>
               <button
-                onClick={() => updateFormField('maritalStatus', 'married')}
+                onClick={() => updateField('maritalStatus', 'married')}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.maritalStatus === 'married'
                     ? 'bg-[#292A2D] text-white'
@@ -168,7 +144,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
               <input
                 type="text"
                 value={formData.spouseName}
-                onChange={(e) => updateFormField('spouseName', e.target.value)}
+                onChange={(e) => updateField('spouseName', e.target.value)}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                 placeholder={t('maritalStatus.spouseNamePlaceholder')}
               />
@@ -181,7 +157,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => updateFormField('hasChildren', true)}
+                onClick={() => updateField('hasChildren', true)}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasChildren === true
                     ? 'bg-[#292A2D] text-white'
@@ -191,7 +167,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('common.yes')}
               </button>
               <button
-                onClick={() => updateFormField('hasChildren', false)}
+                onClick={() => updateField('hasChildren', false)}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasChildren === false
                     ? 'bg-[#292A2D] text-white'
