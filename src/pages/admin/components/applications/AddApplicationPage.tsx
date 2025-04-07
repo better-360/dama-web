@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Info, Check, AlertCircle, Loader, Phone, Lock } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import AdminFileUploadComponent from './UploadComponent';
+import React, { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  Info,
+  Check,
+  AlertCircle,
+  Loader,
+  Phone,
+  Lock,
+} from "lucide-react";
+import AdminFileUploadComponent from "./UploadComponent";
+import adminInstance from "../../../../http/adminInstance";
+import toast from "react-hot-toast";
 
 // SectionData type definition - matches the API format directly
 interface SectionData {
@@ -11,22 +20,39 @@ interface SectionData {
 }
 
 // API Functions
-const createApplication = async (contactData: any): Promise<string> => {
-  // Simulate API call to create application with contact data
-  console.log('Creating application with contact data:', contactData);
-  
-  // Simulate API delay and return a fake ID
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return `app-${Date.now()}`;
+const createApplication = async (contactData: any): Promise<any> => {
+  try {
+    const app = await adminInstance.post("admin/create-applicator", contactData);
+    return app.data;
+  } catch (error) {
+    console.error("API Error in createApplication:", error);
+    throw error;
+  }
 };
 
-const updateApplicationStep = async (applicationId: string, stepData: SectionData): Promise<boolean> => {
-  // Simulate API call to update a specific step
-  console.log(`Updating application ${applicationId} with step data:`, stepData);
+const updateApplicationStep = async (
+  applicationId: string,
+  stepData: SectionData
+): Promise<boolean> => {
+  console.log(
+    `Updating application ${applicationId} with step data:`,
+    JSON.stringify(stepData)
+  );
   
-  // Simulate API delay and return success
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return true;
+  try {
+    const response = await adminInstance.put(
+      `admin/update-pre-application-section/${applicationId}`,
+      stepData
+    );
+    console.log("Update response:", response);
+    return true;
+  } catch (error) {
+    console.error("Error updating application step:", error);
+    toast.error(
+      "Başvuru güncellenirken bir hata oluştu. Lütfen tekrar deneyiniz."
+    );
+    return false;
+  }
 };
 
 interface AddApplicationPageProps {
@@ -34,36 +60,52 @@ interface AddApplicationPageProps {
   onSubmit: (applicationData: SectionData[]) => void;
 }
 
-export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationPageProps) {
-  const { t } = useTranslation();
+export default function AddApplicationPage({
+  onBack,
+  onSubmit,
+}: AddApplicationPageProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [applicationCreated, setApplicationCreated] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
-  
+  const [applicationNumber, setApplicationNumber] = useState("");
+
   // Track which steps are completed
-  const [stepsCompleted, setStepsCompleted] = useState<{[key: number]: boolean}>({
+  const [stepsCompleted, setStepsCompleted] = useState<{
+    [key: number]: boolean;
+  }>({
     1: false,
     2: false,
     3: false,
     4: false,
     5: false,
-    6: false
+    6: false,
   });
-  
+
   // Local file management states
   const [passportFiles, setPassportFiles] = useState<File[]>([]);
   const [employmentFiles, setEmploymentFiles] = useState<File[]>([]);
   const [recognitionFiles, setRecognitionFiles] = useState<File[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
-  
+
   // Error management per section
   const [passportError, setPassportError] = useState<string | null>(null);
   const [employmentError, setEmploymentError] = useState<string | null>(null);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   
+  const minDateString = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 100)
+  )
+    .toISOString()
+    .split("T")[0];
+  const maxDateString = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 18)
+  )
+    .toISOString()
+    .split("T")[0];
+    
   // Main form data structure - using the exact format expected by the API
   const [sectionsData, setSectionsData] = useState<SectionData[]>([
     {
@@ -72,7 +114,7 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
       data: {
         firstName: "",
         lastName: "",
-        birthDate: new Date().toISOString().split('T')[0],
+        birthDate: new Date(),
         email: "",
         telephone: "",
       },
@@ -112,27 +154,40 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
       data: {
         paymentFiles: [],
       },
-    }
+    },
   ]);
+
+  // Debug: Log state changes for debugging
+  useEffect(() => {
+    console.log("Current step:", currentStep);
+    console.log("Steps completed:", stepsCompleted);
+    console.log("Form error:", formError);
+  }, [currentStep, stepsCompleted, formError]);
 
   // Helper function to get a specific section data
   const getSectionData = (sectionName: string): any => {
-    const section = sectionsData.find(section => section.section === sectionName);
+    const section = sectionsData.find(
+      (section) => section.section === sectionName
+    );
     return section ? section.data : null;
   };
 
   // Helper function to update a specific field in a section
-  const updateSectionField = (sectionName: string, fieldName: string, value: any) => {
-    setSectionsData(prevSections => 
-      prevSections.map(section => 
-        section.section === sectionName 
-          ? { 
-              ...section, 
-              data: { 
-                ...section.data, 
-                [fieldName]: value 
-              } 
-            } 
+  const updateSectionField = (
+    sectionName: string,
+    fieldName: string,
+    value: any
+  ) => {
+    setSectionsData((prevSections) =>
+      prevSections.map((section) =>
+        section.section === sectionName
+          ? {
+              ...section,
+              data: {
+                ...section.data,
+                [fieldName]: value,
+              },
+            }
           : section
       )
     );
@@ -140,13 +195,13 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
 
   // Helper function to update an entire section's data
   const updateSectionData = (sectionName: string, newData: any) => {
-    setSectionsData(prevSections => 
-      prevSections.map(section => 
-        section.section === sectionName 
-          ? { 
-              ...section, 
-              data: newData
-            } 
+    setSectionsData((prevSections) =>
+      prevSections.map((section) =>
+        section.section === sectionName
+          ? {
+              ...section,
+              data: newData,
+            }
           : section
       )
     );
@@ -154,99 +209,113 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
 
   // Handle file uploads for each section
   const handlePassportFileUpload = (fileKeys: string[]) => {
-    const currentFiles = getSectionData('passport')?.employmentFiles || [];
-    updateSectionField('passport', 'employmentFiles', [...currentFiles, ...fileKeys]);
+    console.log("Passport file keys received:", fileKeys);
+    const currentFiles = getSectionData("passport")?.employmentFiles || [];
+    const updatedFiles = [...currentFiles, ...fileKeys];
+    console.log("Updated passport files:", updatedFiles);
+    updateSectionField("passport", "employmentFiles", updatedFiles);
   };
 
   const handleEmploymentFileUpload = (fileKeys: string[]) => {
-    const currentFiles = getSectionData('employment')?.employmentFiles || [];
-    updateSectionField('employment', 'employmentFiles', [...currentFiles, ...fileKeys]);
+    console.log("Employment file keys received:", fileKeys);
+    const currentFiles = getSectionData("employment")?.employmentFiles || [];
+    const updatedFiles = [...currentFiles, ...fileKeys];
+    console.log("Updated employment files:", updatedFiles);
+    updateSectionField("employment", "employmentFiles", updatedFiles);
   };
 
   const handleRecognitionFileUpload = (fileKeys: string[]) => {
-    const currentFiles = getSectionData('recognition')?.files || [];
-    updateSectionField('recognition', 'files', [...currentFiles, ...fileKeys]);
+    console.log("Recognition file keys received:", fileKeys);
+    const currentFiles = getSectionData("recognition")?.files || [];
+    const updatedFiles = [...currentFiles, ...fileKeys];
+    console.log("Updated recognition files:", updatedFiles);
+    updateSectionField("recognition", "files", updatedFiles);
   };
 
   const handlePaymentFileUpload = (fileKeys: string[]) => {
-    const currentFiles = getSectionData('payment')?.paymentFiles || [];
-    updateSectionField('payment', 'paymentFiles', [...currentFiles, ...fileKeys]);
+    console.log("Payment file keys received:", fileKeys);
+    const currentFiles = getSectionData("payment")?.paymentFiles || [];
+    const updatedFiles = [...currentFiles, ...fileKeys];
+    console.log("Updated payment files:", updatedFiles);
+    updateSectionField("payment", "paymentFiles", updatedFiles);
   };
 
   // Validation functions for each step
   const validateContactInfo = (): boolean => {
-    const contactData = getSectionData('contact');
+    const contactData = getSectionData("contact");
     
     if (!contactData.firstName.trim()) {
-      setFormError('Ad alanı zorunludur');
+      setFormError("Ad alanı zorunludur");
       return false;
     }
     if (!contactData.lastName.trim()) {
-      setFormError('Soyad alanı zorunludur');
+      setFormError("Soyad alanı zorunludur");
       return false;
     }
     if (!contactData.telephone.trim()) {
-      setFormError('Telefon numarası zorunludur');
+      setFormError("Telefon numarası zorunludur");
       return false;
     }
     // Add phone number validation
     const phoneRegex = /^[0-9+\s()-]{10,15}$/;
     if (!phoneRegex.test(contactData.telephone)) {
-      setFormError('Geçerli bir telefon numarası giriniz');
+      setFormError("Geçerli bir telefon numarası giriniz");
       return false;
     }
     return true;
   };
 
   const validateIncidentInfo = (): boolean => {
-    const incidentData = getSectionData('incident');
+    const incidentData = getSectionData("incident");
     
     if (!incidentData.incidentDescription.trim()) {
-      setFormError('Olay açıklaması zorunludur');
+      setFormError("Olay açıklaması zorunludur");
       return false;
     }
     if (incidentData.incidentDescription.length < 50) {
-      setFormError('Olay açıklaması en az 50 karakter olmalıdır');
+      setFormError("Olay açıklaması en az 50 karakter olmalıdır");
       return false;
     }
     return true;
   };
 
   const validatePassportFiles = (): boolean => {
-    const passportData = getSectionData('passport');
+    const passportData = getSectionData("passport");
     
-    if (passportData.employmentFiles.length === 0) {
-      setFormError('En az bir pasaport belgesi yüklemeniz gerekmektedir');
+    if (!passportData.employmentFiles || passportData.employmentFiles.length === 0) {
+      setFormError("En az bir pasaport belgesi yüklemeniz gerekmektedir");
       return false;
     }
     return true;
   };
 
   const validateEmploymentFiles = (): boolean => {
-    const employmentData = getSectionData('employment');
+    const employmentData = getSectionData("employment");
     
-    if (employmentData.employmentFiles.length === 0) {
-      setFormError('En az bir istihdam belgesi yüklemeniz gerekmektedir');
+    if (!employmentData.employmentFiles || employmentData.employmentFiles.length === 0) {
+      setFormError("En az bir istihdam belgesi yüklemeniz gerekmektedir");
       return false;
     }
     return true;
   };
 
   const validateRecognitionInfo = (): boolean => {
-    const recognitionData = getSectionData('recognition');
+    const recognitionData = getSectionData("recognition");
     
-    if (recognitionData.hasDocuments && recognitionData.files.length === 0) {
-      setFormError('Takdir belgesi olduğunu belirttiniz, en az bir belge yüklemeniz gerekmektedir');
+    if (recognitionData.hasDocuments && (!recognitionData.files || recognitionData.files.length === 0)) {
+      setFormError(
+        "Takdir belgesi olduğunu belirttiniz, en az bir belge yüklemeniz gerekmektedir"
+      );
       return false;
     }
     return true;
   };
 
   const validatePaymentFiles = (): boolean => {
-    const paymentData = getSectionData('payment');
+    const paymentData = getSectionData("payment");
     
-    if (paymentData.paymentFiles.length === 0) {
-      setFormError('En az bir ödeme belgesi yüklemeniz gerekmektedir');
+    if (!paymentData.paymentFiles || paymentData.paymentFiles.length === 0) {
+      setFormError("En az bir ödeme belgesi yüklemeniz gerekmektedir");
       return false;
     }
     return true;
@@ -254,24 +323,38 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
 
   // Validate current step
   const validateCurrentStep = (): boolean => {
+    // Clear any previous error
     setFormError(null);
+    
+    console.log(`Validating step ${currentStep}`);
+    
+    let isValid = false;
     
     switch (currentStep) {
       case 1:
-        return validateContactInfo();
+        isValid = validateContactInfo();
+        break;
       case 2:
-        return validateIncidentInfo();
+        isValid = validateIncidentInfo();
+        break;
       case 3:
-        return validatePassportFiles();
+        isValid = validatePassportFiles();
+        break;
       case 4:
-        return validateEmploymentFiles();
+        isValid = validateEmploymentFiles();
+        break;
       case 5:
-        return validateRecognitionInfo();
+        isValid = validateRecognitionInfo();
+        break;
       case 6:
-        return validatePaymentFiles();
+        isValid = validatePaymentFiles();
+        break;
       default:
-        return true;
+        isValid = true;
     }
+    
+    console.log(`Step ${currentStep} validation result: ${isValid}`);
+    return isValid;
   };
 
   // Create application with contact info
@@ -284,21 +367,30 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
     setFormError(null);
     
     try {
-      const contactData = getSectionData('contact');
+      const contactData = getSectionData("contact");
+      
+      console.log("Creating application with data:", contactData);
       
       // Call API to create application with contact data
-      const appId = await createApplication(contactData);
+      const app = await createApplication(contactData);
+      console.log("Application created successfully:", app);
       
       // Update state to indicate application has been created
-      setApplicationId(appId);
+      setApplicationNumber(app.applicationNumber);
+      setApplicationId(app.id);
       setApplicationCreated(true);
-      setStepsCompleted(prev => ({ ...prev, 1: true }));
+      setStepsCompleted((prev) => ({ ...prev, 1: true }));
       
       // Move to next step
       setCurrentStep(2);
+      
+      toast.success("Başvuru başarıyla oluşturuldu!");
     } catch (error) {
-      console.error('Error creating application:', error);
-      setFormError('Başvuru oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.');
+      console.error("Error creating application:", error);
+      setFormError(
+        "Başvuru oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz."
+      );
+      toast.error("Başvuru oluşturulurken bir hata oluştu!");
     } finally {
       setIsSubmitting(false);
     }
@@ -306,36 +398,61 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
 
   // Save current step and continue
   const handleSaveAndContinue = async () => {
-    if (!validateCurrentStep() || !applicationId) {
+    // Validate the current step
+    if (!validateCurrentStep()) {
+      console.log("Current step validation failed");
+      return;
+    }
+    
+    // Check if application ID exists
+    if (!applicationId) {
+      console.error("No application ID found");
+      setFormError("Başvuru kimliği bulunamadı. Lütfen yeniden başlayın.");
       return;
     }
     
     setIsSubmitting(true);
-    setFormError(null);
     
     try {
-      // Get the current step data
-      const currentSectionData = sectionsData.find(section => section.step === currentStep);
+      // Get the current section data
+      const currentSectionData = sectionsData.find(
+        (section) => section.step === currentStep
+      );
       
       if (!currentSectionData) {
         throw new Error(`Step data not found for step ${currentStep}`);
       }
       
-      // Call API to update step
-      const success = await updateApplicationStep(applicationId, currentSectionData);
+      console.log("Saving section data:", JSON.stringify(currentSectionData));
+      
+      // Call API to update step with current section data
+      const success = await updateApplicationStep(
+        applicationId,
+        currentSectionData
+      );
       
       if (success) {
+        console.log(`Step ${currentStep} saved successfully`);
+        
         // Update completion status
-        setStepsCompleted(prev => ({ ...prev, [currentStep]: true }));
+        setStepsCompleted((prev) => ({ ...prev, [currentStep]: true }));
         
         // Move to next step
-        setCurrentStep(prev => Math.min(6, prev + 1));
+        const nextStep = Math.min(6, currentStep + 1);
+        console.log(`Moving to step ${nextStep}`);
+        setCurrentStep(nextStep);
+        
+        toast.success("Adım başarıyla kaydedildi!");
       } else {
-        setFormError('Adım kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
+        setFormError(
+          "Adım kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz."
+        );
       }
     } catch (error) {
-      console.error('Error saving step:', error);
-      setFormError('Adım kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
+      console.error("Error saving step:", error);
+      setFormError(
+        "Adım kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -344,7 +461,9 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
   // Move to previous step
   const handlePrevStep = () => {
     setFormError(null);
-    setCurrentStep(prev => Math.max(1, prev - 1));
+    const prevStep = Math.max(1, currentStep - 1);
+    console.log(`Moving to previous step ${prevStep}`);
+    setCurrentStep(prevStep);
   };
 
   // Submit final form
@@ -352,7 +471,13 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
     e.preventDefault();
     
     // Validate the current step first
-    if (!validateCurrentStep() || !applicationId) {
+    if (!validateCurrentStep()) {
+      return;
+    }
+    
+    // Check if application ID exists
+    if (!applicationId) {
+      setFormError("Başvuru kimliği bulunamadı. Lütfen yeniden başlayın.");
       return;
     }
     
@@ -361,24 +486,42 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
     
     try {
       // Get the current step data
-      const currentSectionData = sectionsData.find(section => section.step === currentStep);
+      const currentSectionData = sectionsData.find(
+        (section) => section.step === currentStep
+      );
       
       if (!currentSectionData) {
         throw new Error(`Step data not found for step ${currentStep}`);
       }
       
+      console.log("Submitting final step data:", JSON.stringify(currentSectionData));
+      
       // Update the final step
-      const success = await updateApplicationStep(applicationId, currentSectionData);
+      const success = await updateApplicationStep(
+        applicationId,
+        currentSectionData
+      );
       
       if (success) {
+        console.log("Final step saved successfully, submitting application");
+        
+        // Update completion status
+        setStepsCompleted((prev) => ({ ...prev, [currentStep]: true }));
+        
         // Call the onSubmit callback with all section data
         onSubmit(sectionsData);
+        
+        toast.success("Başvuru başarıyla tamamlandı!");
       } else {
-        setFormError('Başvuru tamamlanırken bir hata oluştu. Lütfen tekrar deneyiniz.');
+        setFormError(
+          "Başvuru tamamlanırken bir hata oluştu. Lütfen tekrar deneyiniz."
+        );
       }
     } catch (error) {
-      console.error('Form gönderim hatası:', error);
-      setFormError('Başvuru gönderilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
+      console.error("Form submission error:", error);
+      setFormError(
+        "Başvuru gönderilirken bir hata oluştu. Lütfen tekrar deneyiniz."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -388,7 +531,9 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
   const handleStepNavigation = (step: number) => {
     // Only allow navigating to completed steps or the current active step
     if (step === 1 || stepsCompleted[step - 1] || currentStep === step) {
+      console.log(`Navigating to step ${step}`);
       setCurrentStep(step);
+      setFormError(null); // Clear any errors when navigating
     }
   };
 
@@ -404,21 +549,23 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
       </div>
     </div>
   );
-
+    
   // Render content for each step
   const renderStep = () => {
-    const contactData = getSectionData('contact');
-    const incidentData = getSectionData('incident');
-    const passportData = getSectionData('passport');
-    const employmentData = getSectionData('employment');
-    const recognitionData = getSectionData('recognition');
-    const paymentData = getSectionData('payment');
-    
+    const contactData = getSectionData("contact");
+    const incidentData = getSectionData("incident");
+    const passportData = getSectionData("passport");
+    const employmentData = getSectionData("employment");
+    const recognitionData = getSectionData("recognition");
+    const paymentData = getSectionData("payment");
+        
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Kişisel Bilgiler</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Kişisel Bilgiler
+            </h3>
             {renderInfoBox(
               "Kişisel Bilgiler Hakkında",
               "Başvuru sahibinin temel iletişim bilgilerini eksiksiz doldurunuz. Telefon numarası benzersiz tanımlayıcı olarak kullanılacaktır."
@@ -429,51 +576,80 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
               <div className="flex items-start">
                 <Phone className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
                 <p className="text-sm text-yellow-700">
-                  <span className="font-medium">Önemli:</span> Telefon numarası, başvurunuz için benzersiz tanımlayıcı olarak kullanılacaktır. Lütfen doğru ve güncel bir numara giriniz.
+                  <span className="font-medium">Önemli:</span> Telefon numarası,
+                  başvurunuz için benzersiz tanımlayıcı olarak kullanılacaktır.
+                  Lütfen doğru ve güncel bir numara giriniz.
                 </p>
               </div>
             </div>
             
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Ad</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ad <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={contactData.firstName}
-                  onChange={(e) => updateSectionField('contact', 'firstName', e.target.value)}
+                  onChange={(e) =>
+                    updateSectionField("contact", "firstName", e.target.value)
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
                   required
                   disabled={applicationCreated}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Soyad</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Soyad <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={contactData.lastName}
-                  onChange={(e) => updateSectionField('contact', 'lastName', e.target.value)}
+                  onChange={(e) =>
+                    updateSectionField("contact", "lastName", e.target.value)
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
                   required
                   disabled={applicationCreated}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Doğum Tarihi</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Doğum Tarihi
+                </label>
                 <input
                   type="date"
-                  value={contactData.birthDate}
-                  onChange={(e) => updateSectionField('contact', 'birthDate', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
-                  required
+                  id="birthDate"
+                  value={
+                    contactData.birthDate instanceof Date 
+                      ? contactData.birthDate.toISOString().split("T")[0]
+                      : new Date().toISOString().split("T")[0]
+                  }
+                  onChange={(e) =>
+                    updateSectionField(
+                      "contact",
+                      "birthDate",
+                      new Date(e.target.value)
+                    )
+                  }
+                  min={minDateString}
+                  max={maxDateString}
                   disabled={applicationCreated}
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">E-posta</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  E-posta
+                </label>
                 <input
                   type="email"
                   value={contactData.email}
-                  onChange={(e) => updateSectionField('contact', 'email', e.target.value)}
+                  onChange={(e) =>
+                    updateSectionField("contact", "email", e.target.value)
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
                   disabled={applicationCreated}
                 />
@@ -482,14 +658,20 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Telefon Numarası <span className="text-red-500">*</span>
                 </label>
-                <div className={`relative ${applicationCreated ? 'opacity-75' : ''}`}>
+                <div
+                  className={`relative ${
+                    applicationCreated ? "opacity-75" : ""
+                  }`}
+                >
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     type="tel"
                     value={contactData.telephone}
-                    onChange={(e) => updateSectionField('contact', 'telephone', e.target.value)}
+                    onChange={(e) =>
+                      updateSectionField("contact", "telephone", e.target.value)
+                    }
                     className="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
                     placeholder="+90 (___) ___ __ __"
                     required
@@ -519,7 +701,9 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
                     Oluşturuluyor...
                   </>
-                ) : "Oluştur ve Devam Et"}
+                ) : (
+                  "Oluştur ve Devam Et"
+                )}
               </button>
             )}
             
@@ -529,10 +713,10 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                   <Check className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-green-700">
-                      Başvurunuz oluşturuldu! 
+                      Başvurunuz oluşturuldu!
                     </p>
                     <p className="text-sm text-green-600 mt-1">
-                      Başvuru No: {applicationId}
+                      Başvuru Numarası: {applicationNumber}
                     </p>
                     <p className="text-sm text-green-600">
                       Lütfen formu doldurmaya devam ediniz.
@@ -546,27 +730,43 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
       case 2:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Üslerde Yaşanan Olaylar</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Üslerde Yaşanan Olaylar
+            </h3>
             {renderInfoBox(
               "Olay Detayları Hakkında",
               "Başvuru sahibinin üslerde çalıştığı süre boyunca yaşadığı olayları detaylı bir şekilde açıklayan mektubu bu alana giriniz. Olayların tarihleri, yerleri ve detayları önemlidir."
             )}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Olay Açıklaması <span className="text-red-500">*</span>
+              </label>
               <textarea
                 rows={12}
                 value={incidentData.incidentDescription}
-                onChange={(e) => updateSectionField('incident', 'incidentDescription', e.target.value)}
+                onChange={(e) =>
+                  updateSectionField(
+                    "incident",
+                    "incidentDescription",
+                    e.target.value
+                  )
+                }
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
                 placeholder="Üslerde yaşanan olayları, tarihleri ve yerleri ile birlikte detaylı bir şekilde açıklayınız..."
                 required
               />
+              <p className="mt-1 text-xs text-gray-500">
+                En az 50 karakter giriniz.
+              </p>
             </div>
           </div>
         );
       case 3:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Pasaport ve Seyahat Belgeleri</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Pasaport ve Seyahat Belgeleri
+            </h3>
             {renderInfoBox(
               "Pasaport Belgeleri Hakkında",
               "Üslerde çalışırken kullanılan pasaport ve yurt dışı giriş-çıkış belgelerini yükleyiniz. Özellikle çalışma dönemindeki seyahat kayıtları önemlidir."
@@ -575,6 +775,7 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
               files={passportFiles}
               setFiles={setPassportFiles}
               setError={setPassportError}
+              applicationNumber={applicationNumber}
               fileUrls={passportData.employmentFiles}
               folder="passport"
               label="Pasaport"
@@ -594,12 +795,28 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                 {passportError}
               </div>
             )}
+            
+            {/* Display current files */}
+            {passportData.employmentFiles && passportData.employmentFiles.length > 0 && (
+              <div className="mt-2">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
+                <ul className="space-y-1">
+                  {passportData.employmentFiles.map((fileUrl: string, index: number) => (
+                    <li key={index} className="text-sm text-gray-600">
+                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
       case 4:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">İstihdam Belgeleri</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              İstihdam Belgeleri
+            </h3>
             {renderInfoBox(
               "İstihdam Belgeleri Hakkında",
               "Çalışılan firmalara ait belgeler, iş sözleşmeleri, görev yazıları ve benzeri istihdam ilişkisini gösteren tüm belgeleri yükleyiniz."
@@ -608,6 +825,7 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
               files={employmentFiles}
               setFiles={setEmploymentFiles}
               setError={setEmploymentError}
+              applicationNumber={applicationNumber}
               fileUrls={employmentData.employmentFiles}
               folder="employment"
               label="İstihdam"
@@ -627,12 +845,28 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                 {employmentError}
               </div>
             )}
+            
+            {/* Display current files */}
+            {employmentData.employmentFiles && employmentData.employmentFiles.length > 0 && (
+              <div className="mt-2">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
+                <ul className="space-y-1">
+                  {employmentData.employmentFiles.map((fileUrl: string, index: number) => (
+                    <li key={index} className="text-sm text-gray-600">
+                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
       case 5:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Takdir ve Teşekkür Belgeleri</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Takdir ve Teşekkür Belgeleri
+            </h3>
             {renderInfoBox(
               "Takdir Belgeleri Hakkında",
               "Çalışma süresince alınan takdir, teşekkür, başarı belgeleri ve benzeri dokümanları yükleyiniz. Bu belgeler başvurunuzu güçlendirecektir."
@@ -643,10 +877,18 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                   <input
                     type="checkbox"
                     checked={recognitionData.hasDocuments}
-                    onChange={(e) => updateSectionField('recognition', 'hasDocuments', e.target.checked)}
+                    onChange={(e) =>
+                      updateSectionField(
+                        "recognition",
+                        "hasDocuments",
+                        e.target.checked
+                      )
+                    }
                     className="rounded border-gray-300 text-[#292A2D] focus:ring-[#292A2D]"
                   />
-                  <span className="text-sm text-gray-700">Takdir/Teşekkür belgelerim mevcut</span>
+                  <span className="text-sm text-gray-700">
+                    Takdir/Teşekkür belgelerim mevcut
+                  </span>
                 </label>
               </div>
               {recognitionData.hasDocuments && (
@@ -655,6 +897,7 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                     files={recognitionFiles}
                     setFiles={setRecognitionFiles}
                     setError={setRecognitionError}
+                    applicationNumber={applicationNumber}
                     fileUrls={recognitionData.files}
                     folder="recognition"
                     label="Takdir"
@@ -674,6 +917,20 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                       {recognitionError}
                     </div>
                   )}
+                  
+                  {/* Display current files */}
+                  {recognitionData.files && recognitionData.files.length > 0 && (
+                    <div className="mt-2">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
+                      <ul className="space-y-1">
+                        {recognitionData.files.map((fileUrl: string, index: number) => (
+                          <li key={index} className="text-sm text-gray-600">
+                            {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -682,7 +939,9 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
       case 6:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Ödeme Kayıtları</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Ödeme Kayıtları
+            </h3>
             {renderInfoBox(
               "Ödeme Belgeleri Hakkında",
               "Maaş ödemeleri, banka hesap hareketleri ve diğer finansal kayıtları yükleyiniz. Amerika'da iş ilişkisinin ispatında ilk ücret ödemesi önemlidir, kime yapıldığı önemli değildir."
@@ -691,6 +950,7 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
               files={paymentFiles}
               setFiles={setPaymentFiles}
               setError={setPaymentError}
+              applicationNumber={applicationNumber}
               fileUrls={paymentData.paymentFiles}
               folder="payment"
               label="Ödeme"
@@ -712,6 +972,20 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                 {paymentError}
               </div>
             )}
+            
+            {/* Display current files */}
+            {paymentData.paymentFiles && paymentData.paymentFiles.length > 0 && (
+              <div className="mt-2">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
+                <ul className="space-y-1">
+                  {paymentData.paymentFiles.map((fileUrl: string, index: number) => (
+                    <li key={index} className="text-sm text-gray-600">
+                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
       default:
@@ -720,12 +994,12 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
   };
 
   const steps = [
-    { number: 1, title: 'Kişisel Bilgiler' },
-    { number: 2, title: 'Olay Detayları' },
-    { number: 3, title: 'Pasaport' },
-    { number: 4, title: 'İstihdam' },
-    { number: 5, title: 'Takdir' },
-    { number: 6, title: 'Ödemeler' }
+    { number: 1, title: "Kişisel Bilgiler" },
+    { number: 2, title: "Olay Detayları" },
+    { number: 3, title: "Pasaport" },
+    { number: 4, title: "İstihdam" },
+    { number: 5, title: "Takdir" },
+    { number: 6, title: "Ödemeler" },
   ];
 
   return (
@@ -739,26 +1013,32 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Yeni Başvuru Ekle</h2>
-            <p className="text-sm text-gray-500">Tüm bilgileri eksiksiz doldurunuz</p>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Yeni Başvuru Ekle
+            </h2>
+            <p className="text-sm text-gray-500">
+              Tüm bilgileri eksiksiz doldurunuz
+            </p>
           </div>
         </div>
         
         {applicationId && (
           <div className="text-right">
             <div className="text-sm font-medium text-gray-500">Başvuru No</div>
-            <div className="text-base font-semibold text-gray-900">{applicationId}</div>
+            <div className="text-base font-semibold text-gray-900">
+              {applicationId}
+            </div>
           </div>
         )}
       </div>
-
+      
       <div className="bg-white rounded-lg shadow-sm">
         {/* Progress Indicator */}
         <div className="px-6 pt-6">
           <div className="relative">
             <div className="overflow-hidden h-2 mb-6 text-xs flex rounded bg-gray-200">
-              <div 
-                style={{ width: `${(currentStep / 6) * 100}%` }} 
+              <div
+                style={{ width: `${(currentStep / 6) * 100}%` }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#292A2D] transition-all duration-300"
               ></div>
             </div>
@@ -767,26 +1047,36 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                 // Determine if this step is completed, active, or locked
                 const isCompleted = stepsCompleted[step.number];
                 const isActive = currentStep === step.number;
-                const isLocked = !isCompleted && !isActive && step.number !== 1 && !stepsCompleted[step.number - 1];
+                const isLocked =
+                  !isCompleted &&
+                  !isActive &&
+                  step.number !== 1 &&
+                  !stepsCompleted[step.number - 1];
                 
                 return (
-                  <div 
+                  <div
                     key={step.number}
                     className={`flex flex-col items-center ${
-                      isLocked ? 'opacity-50' : 
-                      isCompleted || isActive ? 'text-[#292A2D]' : 'text-gray-400'
+                      isLocked
+                        ? "opacity-50"
+                        : isCompleted || isActive
+                        ? "text-[#292A2D]"
+                        : "text-gray-400"
                     }`}
                   >
                     <button
                       onClick={() => handleStepNavigation(step.number)}
                       disabled={isLocked}
-                      className={`rounded-full w-6 h-6 flex items-center justify-center mb-1 
-                        ${isCompleted 
-                          ? 'bg-[#292A2D] text-white' 
-                          : isActive 
-                          ? 'bg-white border-2 border-[#292A2D] text-[#292A2D]' 
-                          : 'bg-gray-200 text-gray-500'
-                        } ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`rounded-full w-6 h-6 flex items-center justify-center mb-1
+                        ${
+                          isCompleted
+                            ? "bg-[#292A2D] text-white"
+                            : isActive
+                            ? "bg-white border-2 border-[#292A2D] text-[#292A2D]"
+                            : "bg-gray-200 text-gray-500"
+                        } ${
+                        isLocked ? "cursor-not-allowed" : "cursor-pointer"
+                      }`}
                     >
                       {isLocked && <Lock size={10} />}
                       {isCompleted && <Check size={14} />}
@@ -799,24 +1089,30 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
             </div>
           </div>
         </div>
-
+        
         <div className="border-b border-gray-200 mt-6">
           <nav className="flex divide-x divide-gray-200">
             {steps.map((step) => {
               // Determine if this step is accessible
-              const isAccessible = step.number === 1 || stepsCompleted[step.number - 1] || currentStep === step.number;
+              const isAccessible =
+                step.number === 1 ||
+                stepsCompleted[step.number - 1] ||
+                currentStep === step.number;
               
               return (
                 <button
                   key={step.number}
-                  onClick={() => isAccessible && handleStepNavigation(step.number)}
+                  onClick={() =>
+                    isAccessible && handleStepNavigation(step.number)
+                  }
                   disabled={!isAccessible}
                   className={`flex-1 px-4 py-3 text-sm font-medium
-                    ${currentStep === step.number
-                      ? 'text-[#292A2D] border-b-2 border-[#292A2D]'
-                      : isAccessible
-                      ? 'text-gray-500 hover:text-gray-700'
-                      : 'text-gray-300 cursor-not-allowed'
+                    ${
+                      currentStep === step.number
+                        ? "text-[#292A2D] border-b-2 border-[#292A2D]"
+                        : isAccessible
+                        ? "text-gray-500 hover:text-gray-700"
+                        : "text-gray-300 cursor-not-allowed"
                     }`}
                 >
                   {step.title}
@@ -825,12 +1121,13 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
             })}
           </nav>
         </div>
-
+        
         <div className="p-6">
+          {/* Make error message more prominent */}
           {formError && (
-            <div className="mb-6 p-3 rounded-lg bg-red-50 text-red-700 text-sm flex items-center border border-red-200">
-              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-              {formError}
+            <div className="mb-6 p-4 rounded-lg bg-red-100 text-red-800 text-sm flex items-center border-l-4 border-red-500 animate-pulse">
+              <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+              <span className="font-medium">{formError}</span>
             </div>
           )}
           
@@ -855,8 +1152,10 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                     disabled={isSubmitting}
                     className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#292A2D] rounded-md hover:bg-[#292A2D]/90"
                   >
-                    {isSubmitting && <Loader className="w-4 h-4 mr-2 animate-spin" />}
-                    {isSubmitting ? 'Kaydediliyor...' : 'Kaydet ve Devam Et'}
+                    {isSubmitting && (
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    {isSubmitting ? "Kaydediliyor..." : "Kaydet ve Devam Et"}
                   </button>
                 ) : (
                   <button
@@ -864,8 +1163,10 @@ export default function AddApplicationPage({ onBack, onSubmit }: AddApplicationP
                     disabled={isSubmitting}
                     className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-75 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting && <Loader className="w-4 h-4 mr-2 animate-spin" />}
-                    {isSubmitting ? 'Gönderiliyor...' : 'Başvuruyu Tamamla'}
+                    {isSubmitting && (
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    {isSubmitting ? "Gönderiliyor..." : "Başvuruyu Tamamla"}
                   </button>
                 )}
               </div>

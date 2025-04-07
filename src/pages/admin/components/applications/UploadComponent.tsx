@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckCircle, Upload, AlertCircle, File as FileIcon, Loader } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { uploadFileToS3 } from "../../../../utils/firebase";
+import { uploadFileToS3fromAdmin } from "../../../../utils/firebase";
 
 interface AdminFileUploadComponentProps {
   files: File[];
@@ -13,6 +13,7 @@ interface AdminFileUploadComponentProps {
   label?: string;
   maxSize?: number; // in MB
   folder?: string; // S3 folder name
+  applicationNumber: string; // Optional application number
   onUploadComplete?: (fileKeys: string[]) => void;
 }
 
@@ -20,6 +21,7 @@ const AdminFileUploadComponent: React.FC<AdminFileUploadComponentProps> = ({
   files,
   setFiles,
   setError,
+  applicationNumber,
   fileUrls = [],
   accept = ".pdf,.doc,.docx,.jpg,.jpeg,.png",
   label = "Files",
@@ -145,11 +147,12 @@ const AdminFileUploadComponent: React.FC<AdminFileUploadComponentProps> = ({
         setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
         
         // Upload the file
-        const { fileKey } = await uploadFileToS3(
+        const { fileKey } = await uploadFileToS3fromAdmin(
           file,
           file.name,
           file.type,
-          folder
+          folder,
+          applicationNumber
         );
         
         // Add the file key to the list

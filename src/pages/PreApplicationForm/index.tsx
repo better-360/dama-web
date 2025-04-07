@@ -10,7 +10,6 @@ import PaymentUpload from "./components/PaymentUpload";
 import ApplicationSummary from "./components/ApplicationSummary";
 import SuccessPage from "./components/SuccessPage";
 import LanguageSelector from "../../components/LanguageSelector";
-import { useAppSelector } from "../../store/hooks";
 
 export default function PreApplicationForm() {
   const [currentPage, setCurrentPage] = useState<
