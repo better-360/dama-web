@@ -170,7 +170,10 @@
     "totalCompensation": "Total Compensation",
     "totalCompensationPlaceholder": "Enter your total compensation",
     "contractInfo": "Contract Information",
-    "hasContract": "Do you have a contract?"
+    "hasContract": "Do you have a contract?",
+    "contractType": "Contract Type",
+    "startDate":"Start date",
+    "endDate":"End date"
   },
   "recognitionUpload": {
     "back": "Go Back",
@@ -303,7 +306,8 @@
     "hasChildren": "Do you have children?",
     "childInfo": "Child Information",
     "childNamePlaceholder": "Enter child's name",
-    "addChild": "Add Child"
+    "addChild": "Add Child",
+    "childrenCount": " children count"
   },
   "submissionComplete": {
     "title": "Application Received",
@@ -320,7 +324,8 @@
       "linkTitle": "Evidence Link",
       "urlPlaceholder": "Enter URL (e.g. https://...)",
       "descriptionPlaceholder": "Enter a description for this evidence",
-      "addLink": "Add New Link"
+      "addLink": "Add New Link",
+      "linkCount": "Links count"
     },
     "witnesses": {
       "title": "Witnesses",
@@ -328,7 +333,8 @@
       "witnessInfo": "Witness Information",
       "firstName": "First Name",
       "lastName": "Last Name",
-      "addWitness": "Add New Witness"
+      "addWitness": "Add New Witness",
+      "count": "Witnesses count"
     }
   },
 
@@ -340,6 +346,7 @@
   "weeklyDays": "Days worked per week",
   "lastWorkDate": "Last Date of Work",
   "supervisor": "Supervisor's name",
+  "bases": "Bases Worked",
   "basesPlaceholder": "Specify the bases or locations where you worked",
   "loa": {
     "title": "Letter of Authorization (LOA)",
@@ -351,6 +358,7 @@
   "title": "Post-Employment Status",
   "subtitle": "Provide information about your employment after returning from the bases",
   "hasWorked": "Have you worked anywhere since returning from the bases?",
+  "previousJobs": "Previous Jobs",
   "previousEmployment": {
     "title": "Previous Employment Information",
     "companyName": "Company name",

@@ -1,9 +1,40 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle } from 'lucide-react';
+import { getApplicationData } from '../../../http/requests/applicator';
 
 const SubmissionComplete: React.FC = () => {
   const { t } = useTranslation();
+  const [appNumber, setAppNumber] = React.useState<string | null>(null);
+const [loading, setLoading] = React.useState(true);
+
+  const fetchApplicationData = async () => {
+    try {
+      setLoading(true);
+      const response = await getApplicationData();  
+      console.log('Application data:', response);
+      console.log('Application number:', response[0].applicationNumber);
+      const applicationNo=response[0].applicationNumber;
+      setAppNumber(applicationNo);
+    } catch (error) {
+      console.error('Error fetching application data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }; 
+
+  useEffect(() => {
+    fetchApplicationData();
+  }
+  , []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">{t('loading')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center p-4">
@@ -28,7 +59,7 @@ const SubmissionComplete: React.FC = () => {
         <p className="text-sm text-gray-500">
           {t('submissionComplete.reference')}
           <span className="font-medium text-[#292A2D] ml-2">
-            #DMA-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+            {appNumber}
           </span>
         </p>
       </div>

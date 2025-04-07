@@ -169,7 +169,10 @@
   "totalCompensation": "Toplam Ücret",
   "totalCompensationPlaceholder": "Toplam ücretinizi girin",
   "contractInfo": "Sözleşme Bilgileri",
-  "hasContract": "Sözleşmeniz var mı?"
+  "hasContract": "Sözleşmeniz var mı?",
+  "startDate": "Başlangıç Tarihi",
+  "endDate": "Bitiş Tarihi",
+  "contractType": "Sözleşme Türü"
 },
   "recognitionUpload": {
     "back": "Geri Dön",
@@ -246,7 +249,8 @@
     "hasChildren": "Çocuğunuz var mı?",
     "childInfo": "Çocuk Bilgileri",
     "childNamePlaceholder": "Çocuğunuzun adını girin",
-    "addChild": "Çocuk Ekle"
+    "addChild": "Çocuk Ekle",
+    "childrenCount":"Çocuk Sayısı"
   },
   "summary": {
     "back": "Geri Dön",
@@ -314,13 +318,15 @@
   },
   "evidenceWitness": {
   "title": "Kanıtlar ve Tanıklar",
+
   "subtitle": "Lütfen davanızı destekleyecek kanıtları ve tanıkları ekleyin",
   "evidence": {
     "title": "Kanıtlar",
     "linkTitle": "Kanıt Linki",
     "urlPlaceholder": "URL adresini girin (örn. https://...)",
     "descriptionPlaceholder": "Bu kanıtın açıklamasını girin",
-    "addLink": "Yeni Link Ekle"
+    "addLink": "Yeni Link Ekle",
+    "linkCount": "Link Sayısı"
   },
   "witnesses": {
     "title": "Tanıklar",
@@ -328,7 +334,8 @@
     "witnessInfo": "Tanık Bilgileri",
     "firstName": "Adı",
     "lastName": "Soyadı",
-    "addWitness": "Yeni Tanık Ekle"
+    "addWitness": "Yeni Tanık Ekle",
+    "count": "Tanık Sayısı"
   }
 },
 "workConditions": {
@@ -339,6 +346,7 @@
   "weeklyDays": "Haftada kaç gün çalıştınız",
   "lastWorkDate": "Son Çalışma Tarihiniz",
   "supervisor": "Amirinizin adı",
+  "bases": "Üsler",
   "basesPlaceholder": "Çalıştığınız üsleri veya konumları belirtin",
   "loa": {
     "title": "İzin Belgesi (LOA)",
@@ -349,6 +357,7 @@
   "title": "İş Sonrası Durum",
   "subtitle": "Üslerden döndükten sonraki iş durumunuz hakkında bilgi verin",
   "hasWorked": "Üslerden döndükten sonra herhangi bir işte çalıştınız mı?",
+  "previousJobs":"Önceki İşler",
   "previousEmployment": {
     "title": "Önceki İş Bilgileri",
     "companyName": "Şirket adı",

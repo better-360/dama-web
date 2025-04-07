@@ -72,8 +72,9 @@ const Summary: React.FC<SummaryProps> = ({
   
   // Function to format value based on field type
   const formatValue = (value: any): string => {
-    if (value === true) return t('common.yes');
-    if (value === false) return t('common.no');
+    if (typeof value === 'boolean') return value ? t('common.yes') : t('common.no');
+    if(value==="single") return t('maritalStatus.single');
+    if(value==="married") return t('maritalStatus.married');
     if (value === null || value === undefined || value === '') return '-';
     return String(value);
   };
@@ -143,7 +144,7 @@ const Summary: React.FC<SummaryProps> = ({
         return [
           { label: t('evidenceWitness.witnesses.hasWitnesses'), value: formatValue(data.hasWitnesses) },
           { label: t('evidenceWitness.witnesses.count'), value: data.witnesses?.length ? String(data.witnesses.length) : '0' },
-          { label: t('evidenceWitness.evidenceLinks.count'), value: data.evidenceLinks?.length ? String(data.evidenceLinks.length) : '0' },
+          { label: t('evidenceWitness.evidence.linkCount'), value: data.evidenceLinks?.length ? String(data.evidenceLinks.length) : '0' },
         ];
       }
     },
