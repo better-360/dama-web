@@ -4,7 +4,7 @@ import type { ApplicationDetail } from '../../types/applicationDetail';
 import { sectionLabels } from '../../types/applicationDetail';
 import AppointmentModal from './AppointmentModal';
 import ConfirmationModal from './ConfirmationModal';
-import { getApplication, setAsClient } from '../../../../http/requests/admin';
+import { getApplication, getFileUrl, setAsClient } from '../../../../http/requests/admin';
 
 interface ApplicationDetailPageProps {
   id: string;
@@ -79,6 +79,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     }
   };
 
+  
+
   const getFilesForSection = (section: any) => {
     if (!section || !section.data) return undefined;
 
@@ -96,6 +98,15 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     }
   };
 
+  const getFileLink = async (file: string) => {
+    try {
+      const fileUrl = await getFileUrl(file);
+      console.log('File URL:', fileUrl); // Debug log
+      window.open(fileUrl, '_blank');
+    } catch (error) {
+      console.error('Error in getFileLink:', error);
+    }
+  };
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
       return (
@@ -106,17 +117,15 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {files.map((file, index) => (
-          <a
+          <button
             key={index}
-            href={file}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={() => getFileLink(file)}
             className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <FileText className="w-5 h-5 text-gray-500 mr-2" />
-            <span className="text-sm text-gray-700 truncate">Dosya {index + 1}</span>
+            <span className="text-sm text-gray-700 truncate">Dosya {file}</span>
             <Download className="w-4 h-4 text-gray-500 ml-auto" />
-          </a>
+          </button>
         ))}
       </div>
     );

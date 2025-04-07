@@ -4,7 +4,7 @@ import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
 import { sectionLabels as applicationSectionLabels } from "../../types/clientDetail";
 import { mockApplicationDetail } from "../../data/mockApplicationDetail";
-import { getApplication } from "../../../../http/requests/admin";
+import { getApplication, getFileUrl } from "../../../../http/requests/admin";
 
 interface ClientDetailPageProps {
   id: string;
@@ -59,6 +59,18 @@ export default function ClientDetailPage({
     }
   };
 
+
+    const getFileLink = async (file: string) => {
+      try {
+        
+        const fileUrl = await getFileUrl(file);
+        console.log('File URL:', fileUrl); // Debug log
+        window.open(fileUrl, '_blank');
+      } catch (error) {
+        console.error('Error in getFileLink:', error);
+      }
+    };
+
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
       return <p className="text-sm text-gray-500 italic">Dosya yüklenmemiş</p>;
@@ -67,11 +79,9 @@ export default function ClientDetailPage({
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {files.map((file, index) => (
-          <a
+          <p
             key={index}
-            href={file}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={() => getFileLink(file)}
             className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <FileText className="w-5 h-5 text-gray-500 mr-2" />
@@ -79,7 +89,7 @@ export default function ClientDetailPage({
               Dosya {index + 1}
             </span>
             <Download className="w-4 h-4 text-gray-500 ml-auto" />
-          </a>
+          </p>
         ))}
       </div>
     );

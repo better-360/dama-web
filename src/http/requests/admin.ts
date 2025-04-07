@@ -18,6 +18,13 @@ export const getApplication = async (applicatorId: string) => {
 };
 
 
+export const getFileUrl = async (fileKey: string) => {
+  const encodedKey = encodeURIComponent(fileKey);
+  const response = await adminInstance.get(`admin/view-file/${encodedKey}`);
+  console.log("File URL response:", response.data); // Debug log
+  return response.data;
+  };
+
 
 export const setAsClient = async (applicatorId: string) => {
     const response = await adminInstance.patch(`admin/applicator/${applicatorId}/set-as-client`);
