@@ -38,7 +38,6 @@ export default function PreApplicationForm() {
     files: File[];
   }>({ hasDocuments: false, files: [] });
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
-  const applicatorData=useAppSelector((state)=>state.applicator.applicatorData);
   
   const handleSubmitApplication = () => {
     // Here you would typically send the data to your backend

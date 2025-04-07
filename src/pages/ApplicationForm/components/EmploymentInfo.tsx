@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Briefcase } from "lucide-react";
+import { ChevronLeft, Briefcase, Loader } from "lucide-react";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { uploadFileToS3 } from "../../../utils/firebase";
 
@@ -16,24 +16,13 @@ interface EmploymentData {
   isMultiplePayments: boolean;
 }
 
-
 // Define a type for the updateFormData function to avoid type mismatch
-type UpdateFormDataFn = (data: Partial<{
-  employerName: string;
-  position: string;
-  salary: string;
-  startDate: string;
-  hasContract: boolean | null;
-  contractFile: string|undefined;
-  isContractor: boolean;
-  totalCompensation: string;
-  isMultiplePayments: boolean;
-}>) => void;
+type UpdateFormDataFn = (data: Partial<EmploymentData>) => void;
 
 interface EmploymentInfoProps {
   formData: EmploymentData;
   updateFormData: UpdateFormDataFn;
-  onComplete: () => void;
+  onComplete: (updatedData?: EmploymentData) => void; // Modified to accept complete data
   onBack: () => void;
 }
 
@@ -47,8 +36,14 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  // Local temporary file state (not stored in central state until upload)
-  const [tempContractFile, setTempContractFile] = useState<File | undefined>(undefined);
+  
+  // Local copy of form data to work with
+  const [localFormData, setLocalFormData] = useState<EmploymentData>({...formData});
+  
+  // Update local copy when props change
+  useEffect(() => {
+    setLocalFormData({...formData});
+  }, [formData]);
 
   const folder = "contracts";
 
@@ -75,42 +70,79 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
     return uploadedFileKeys;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLocalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setLocalFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Sync with parent
     updateFormData({ [name]: value });
+  };
+
+  const handleOptionChange = (field: keyof EmploymentData, value: any) => {
+    setLocalFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Sync with parent
+    updateFormData({ [field]: value });
   };
 
   const isFormValid = () => {
     return (
-      formData.employerName &&
-      formData.position &&
-      formData.startDate &&
-      formData.salary &&
-      formData.isContractor !== null &&
-      formData.isMultiplePayments !== null &&
-      formData.totalCompensation &&
-      formData.hasContract !== null &&
-      (formData.hasContract === false || (formData.hasContract === true && (formData.contractFile || tempContractFile)))
+      localFormData.employerName &&
+      localFormData.position &&
+      localFormData.startDate &&
+      localFormData.salary &&
+      localFormData.isContractor !== null &&
+      localFormData.isMultiplePayments !== null &&
+      localFormData.totalCompensation &&
+      localFormData.hasContract !== null &&
+      (localFormData.hasContract === false || (localFormData.hasContract === true && (localFormData.contractFile || files.length > 0)))
     );
   };
 
-  useEffect(() => {
-    setTempContractFile(files[0]);
-  }, [files]);
-
   const handleContinue = async () => {
-    if (isFormValid()) {
-      setSaving(true);
-      
-      // Only upload if there are new files
-      if (files.length > 0) {
+    if (!isFormValid()) {
+      return;
+    }
+    
+    setSaving(true);
+    let finalFormData = {...localFormData};
+    
+    try {
+      // Upload files if needed
+      if (files.length > 0 && localFormData.hasContract) {
         const uploadedUrls = await handleUploadAll();
-        updateFormData({ contractFile: uploadedUrls[0] || "" });
+        console.log("Uploaded URLs:", uploadedUrls);
+        
+        if (uploadedUrls.length > 0) {
+          // Update local state
+          finalFormData.contractFile = uploadedUrls[0];
+          // Also update parent form data
+          updateFormData({ contractFile: uploadedUrls[0] });
+        }
       }
       
+      // Pass the complete form data with file URL to parent
+      onComplete(finalFormData);
+    } catch (error) {
+      console.error("Error during save:", error);
+      setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
       setSaving(false);
-      onComplete();
     }
+  };
+
+  const removeContractFile = () => {
+    setLocalFormData(prev => ({
+      ...prev,
+      contractFile: undefined
+    }));
+    updateFormData({ contractFile: undefined });
   };
 
   return (
@@ -146,8 +178,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               <input
                 type="text"
                 name="employerName"
-                value={formData.employerName}
-                onChange={handleInputChange}
+                value={localFormData.employerName}
+                onChange={handleLocalInputChange}
                 placeholder={t("employment.employerName")}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
@@ -155,8 +187,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               <input
                 type="text"
                 name="position"
-                value={formData.position}
-                onChange={handleInputChange}
+                value={localFormData.position}
+                onChange={handleLocalInputChange}
                 placeholder={t("employment.position")}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
@@ -164,8 +196,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               <input
                 type="date"
                 name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
+                value={localFormData.startDate}
+                onChange={handleLocalInputChange}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
 
@@ -173,8 +205,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <input
                   type="number"
                   name="salary"
-                  value={formData.salary}
-                  onChange={handleInputChange}
+                  value={localFormData.salary}
+                  onChange={handleLocalInputChange}
                   placeholder={t("employment.salary")}
                   className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                 />
@@ -199,9 +231,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => updateFormData({ isContractor: true })}
+                    onClick={() => handleOptionChange('isContractor', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.isContractor === true
+                      localFormData.isContractor === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -210,9 +242,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateFormData({ isContractor: false })}
+                    onClick={() => handleOptionChange('isContractor', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.isContractor === false
+                      localFormData.isContractor === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -229,9 +261,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => updateFormData({ isMultiplePayments: false })}
+                    onClick={() => handleOptionChange('isMultiplePayments', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.isMultiplePayments === false
+                      localFormData.isMultiplePayments === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -240,9 +272,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateFormData({ isMultiplePayments: true })}
+                    onClick={() => handleOptionChange('isMultiplePayments', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.isMultiplePayments === true
+                      localFormData.isMultiplePayments === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -256,8 +288,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <input
                   type="number"
                   name="totalCompensation"
-                  value={formData.totalCompensation}
-                  onChange={handleInputChange}
+                  value={localFormData.totalCompensation}
+                  onChange={handleLocalInputChange}
                   placeholder={t("employment.totalCompensation")}
                   className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                 />
@@ -282,9 +314,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => updateFormData({ hasContract: true })}
+                    onClick={() => handleOptionChange('hasContract', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.hasContract === true
+                      localFormData.hasContract === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -293,9 +325,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateFormData({ hasContract: false })}
+                    onClick={() => handleOptionChange('hasContract', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      formData.hasContract === false
+                      localFormData.hasContract === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -305,16 +337,16 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 </div>
               </div>
 
-              {formData.hasContract && (
+              {localFormData.hasContract && (
                 <div>
-                  {formData.contractFile && (
+                  {localFormData.contractFile && (
                     <div className="mb-2 p-2 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600 truncate">
-                          {formData.contractFile.split('/').pop() || 'Contract file'}
+                          {localFormData.contractFile.split('/').pop() || 'Contract file'}
                         </span>
                         <button
-                          onClick={() => updateFormData({ contractFile: '' })}
+                          onClick={removeContractFile}
                           className="text-red-500 hover:text-red-700"
                         >
                           Remove
@@ -323,25 +355,27 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     </div>
                   )}
                   
-                  <MultiFileUploadComponent
-                    files={files}
-                    setFiles={setFiles}
-                    setError={setError}
-                    label="Contract"
-                    allowedTypes={[
-                      "application/pdf",
-                      "application/msword",
-                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                      "application/vnd.ms-excel",
-                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      "application/vnd.ms-powerpoint",
-                      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                      "application/vnd.ms-access",
-                      "image/jpeg",
-                      "image/png",
-                      "image/jpg",
-                    ]}
-                  />
+                  {(!localFormData.contractFile || localFormData.contractFile === "") && (
+                    <MultiFileUploadComponent
+                      files={files}
+                      setFiles={setFiles}
+                      setError={setError}
+                      label="Contract"
+                      allowedTypes={[
+                        "application/pdf",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.ms-powerpoint",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "application/vnd.ms-access",
+                        "image/jpeg",
+                        "image/png",
+                        "image/jpg",
+                      ]}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -356,8 +390,9 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
           <button
             onClick={handleContinue}
             disabled={!isFormValid() || saving}
-            className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
+            {saving && <Loader className="w-4 h-4 mr-2 animate-spin" />}
             {saving ? t("common.saving") : t("common.continue")}
           </button>
         </div>

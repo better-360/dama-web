@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, FileText, Download, Link as LinkIcon } from "lucide-react";
 import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
 import { sectionLabels as applicationSectionLabels } from "../../types/clientDetail";
-import { mockApplicationDetail } from "../../data/mockApplicationDetail";
 import { getApplication, getFileUrl } from "../../../../http/requests/admin";
 
 interface ClientDetailPageProps {
@@ -60,17 +59,16 @@ export default function ClientDetailPage({
   };
 
 
-    const getFileLink = async (file: string) => {
-      try {
-        
-        const fileUrl = await getFileUrl(file);
-        console.log('File URL:', fileUrl); // Debug log
-        window.open(fileUrl, '_blank');
-      } catch (error) {
-        console.error('Error in getFileLink:', error);
-      }
-    };
 
+  const getFileLink = async (file: string) => {
+    try {
+      const fileUrl = await getFileUrl(file);
+      console.log('File URL:', fileUrl); // Debug log
+      window.open(fileUrl, '_blank');
+    } catch (error) {
+      console.error('Error in getFileLink:', error);
+    }
+  };
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
       return <p className="text-sm text-gray-500 italic">Dosya yüklenmemiş</p>;
@@ -236,10 +234,9 @@ export default function ClientDetailPage({
                     <label className="block text-sm font-medium text-gray-500 mb-2">
                       Sözleşme
                     </label>
-                    <a
-                      href={section.data.contractFile}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <p
+                      onClick={() => getFileLink(section.data.contractFile)}
+                      
                       className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors w-fit"
                     >
                       <FileText className="w-5 h-5 text-gray-500 mr-2" />
@@ -247,7 +244,7 @@ export default function ClientDetailPage({
                         Sözleşme Dosyası
                       </span>
                       <Download className="w-4 h-4 text-gray-500 ml-2" />
-                    </a>
+                    </p>
                   </div>
                 )}
               </div>
@@ -361,16 +358,16 @@ export default function ClientDetailPage({
                     Kanıt Bağlantıları
                   </label>
                   <div className="space-y-2">
-                    {section.data.evidenceLinks.map((link: string, index: number) => (
+                    {section.data.evidenceLinks.map((evidenceLink:any, index: number) => (
                       <a
                         key={index}
-                        href={link}
+                        href={evidenceLink.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center text-sm text-blue-600 hover:text-blue-800"
                       >
                         <LinkIcon className="w-4 h-4 mr-1" />
-                        {safe(link)}
+                        {safe(evidenceLink.url)}
                       </a>
                     ))}
                   </div>

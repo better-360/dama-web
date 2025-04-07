@@ -26,7 +26,7 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
       step: 3,
       section: "passport",
       data: {
-        employmentFiles: urls,
+        passportFiles: urls,
       },
     };
 

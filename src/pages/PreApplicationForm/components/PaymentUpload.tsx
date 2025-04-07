@@ -4,7 +4,6 @@ import { ArrowLeft, AlertCircle, ChevronRight, DollarSign, HelpCircle } from "lu
 import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
-import { useAppSelector } from "../../../store/hooks";
 
 interface PaymentUploadProps {
   onBack: () => void;
@@ -29,7 +28,6 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
       setSaving(true);
       const uploadedUrls = await handleUploadAll();
       setSaving(false);
-      // İşlemleri kaydetmek için backend'e gönderme
       await handleSaveStep6(uploadedUrls);
       onContinue(files);
     }

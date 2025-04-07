@@ -119,6 +119,12 @@ export default function ApplicationForm() {
     }
   });
 
+
+  useEffect(() => {
+    console.log('formdata değişti',formData)
+  }, [formData]);
+
+
   // Fetch existing data on initial load
   useEffect(() => {
     const fetchData = async () => {
@@ -188,6 +194,7 @@ export default function ApplicationForm() {
         data: formData[section]
       };
       
+      console.log(`Saving section ${section}:`, sectionData);
       await updateApplicationSection(sectionData);
     } catch (err) {
       console.error(`Error saving ${section} data:`, err);
@@ -268,33 +275,93 @@ export default function ApplicationForm() {
     );
   }
 
-  if (currentStep === "employment") {
-    return (
-      <EmploymentInfo
-        formData={formData.employment}
-        updateFormData={(data) => updateFormSection('employment', data)}
-        onComplete={() => {
+  // In ApplicationForm.tsx, modify the employment section:
+
+if (currentStep === "employment") {
+  return (
+    <EmploymentInfo
+      formData={formData.employment}
+      updateFormData={(data) => updateFormSection('employment', data)}
+      onComplete={(updatedData) => {
+        // If we have complete updated data with contract file
+        if (updatedData) {
+          console.log("Received complete updated data:", updatedData);
+          
+          // Update form data in state
+          updateFormSection('employment', updatedData);
+          
+          // Instead of using setTimeout and saveSection, directly send the updated data
+          const sectionData = {
+            step: 2,
+            section: 'employment',
+            data: updatedData // Use the updatedData directly instead of formData.employment
+          };
+          
+          console.log("Sending data to server:", sectionData);
+          
+          // Send the API request with the updated data
+          updateApplicationSection(sectionData)
+            .then(() => {
+              console.log("Successfully saved employment data with contract file");
+              setCurrentStep("workConditions");
+            })
+            .catch((err) => {
+              console.error("Error saving employment data:", err);
+              // Handle error appropriately
+            });
+        } else {
+          // Fallback to using current state if no updated data provided
           saveSection('employment', 2);
           setCurrentStep("workConditions");
-        }}
-        onBack={handleBack}
-      />
-    );
-  }
+        }
+      }}
+      onBack={handleBack}
+    />
+  );
+}
 
-  if (currentStep === "workConditions") {
-    return (
-      <WorkConditions
-        formData={formData.workConditions}
-        updateFormData={(data) => updateFormSection('workConditions', data)}
-        onComplete={() => {
+if (currentStep === "workConditions") {
+  return (
+    <WorkConditions
+      formData={formData.workConditions}
+      updateFormData={(data) => updateFormSection('workConditions', data)}
+      onComplete={(updatedData) => {
+        // If we have complete updated data
+        if (updatedData) {
+          console.log("Received complete work conditions data:", updatedData);
+          
+          // Update form data in state
+          updateFormSection('workConditions', updatedData);
+          
+          // Send the updated data directly to API
+          const sectionData = {
+            step: 3,
+            section: 'workConditions',
+            data: updatedData // Use the updatedData directly
+          };
+          
+          console.log("Sending work conditions data to server:", sectionData);
+          
+          // Send the API request with the updated data
+          updateApplicationSection(sectionData)
+            .then(() => {
+              console.log("Successfully saved work conditions data with LOA file");
+              setCurrentStep("postEmployment");
+            })
+            .catch((err) => {
+              console.error("Error saving work conditions data:", err);
+              // Handle error appropriately
+            });
+        } else {
+          // Fallback to using current state if no updated data provided
           saveSection('workConditions', 3);
           setCurrentStep("postEmployment");
-        }}
-        onBack={handleBack}
-      />
-    );
-  }
+        }
+      }}
+      onBack={handleBack}
+    />
+  );
+}
 
   if (currentStep === "postEmployment") {
     return (
