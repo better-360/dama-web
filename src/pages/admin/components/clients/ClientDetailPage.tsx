@@ -47,6 +47,8 @@ export default function ClientDetailPage({
     switch (section.section) {
       case "passport":
         return section.data.passportFiles;
+      case "workConditions":
+        return section.data.loaFile;
       case "employment":
         return section.data.employmentFiles;
       case "recognition":
@@ -292,6 +294,24 @@ export default function ClientDetailPage({
                     {safe(section.data.supervisorName)}
                   </p>
                 </div>
+                {section.data.loaFile && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-500 mb-2">
+                     LOA File
+                    </label>
+                    <p
+                      onClick={() => getFileLink(section.data.loaFile)}
+                      
+                      className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors w-fit"
+                    >
+                      <FileText className="w-5 h-5 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700">
+                      Loa Dosyası
+                      </span>
+                      <Download className="w-4 h-4 text-gray-500 ml-2" />
+                    </p>
+                  </div>
+                )}
               </div>
             )}
   
