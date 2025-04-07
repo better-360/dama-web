@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ArrowLeft,
   Info,
@@ -11,6 +11,9 @@ import {
 import AdminFileUploadComponent from "./UploadComponent";
 import adminInstance from "../../../../http/adminInstance";
 import toast from "react-hot-toast";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import { useNavigate } from "react-router-dom";
 
 // SectionData type definition - matches the API format directly
 interface SectionData {
@@ -22,7 +25,10 @@ interface SectionData {
 // API Functions
 const createApplication = async (contactData: any): Promise<any> => {
   try {
-    const app = await adminInstance.post("admin/create-applicator", contactData);
+    const app = await adminInstance.post(
+      "admin/create-applicator",
+      contactData
+    );
     return app.data;
   } catch (error) {
     console.error("API Error in createApplication:", error);
@@ -38,7 +44,7 @@ const updateApplicationStep = async (
     `Updating application ${applicationId} with step data:`,
     JSON.stringify(stepData)
   );
-  
+
   try {
     const response = await adminInstance.put(
       `admin/update-pre-application-section/${applicationId}`,
@@ -94,7 +100,8 @@ export default function AddApplicationPage({
   const [employmentError, setEmploymentError] = useState<string | null>(null);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  
+
+  const navigate=useNavigate();
   const minDateString = new Date(
     new Date().setFullYear(new Date().getFullYear() - 100)
   )
@@ -105,7 +112,7 @@ export default function AddApplicationPage({
   )
     .toISOString()
     .split("T")[0];
-    
+
   // Main form data structure - using the exact format expected by the API
   const [sectionsData, setSectionsData] = useState<SectionData[]>([
     {
@@ -157,13 +164,6 @@ export default function AddApplicationPage({
     },
   ]);
 
-  // Debug: Log state changes for debugging
-  useEffect(() => {
-    console.log("Current step:", currentStep);
-    console.log("Steps completed:", stepsCompleted);
-    console.log("Form error:", formError);
-  }, [currentStep, stepsCompleted, formError]);
-
   // Helper function to get a specific section data
   const getSectionData = (sectionName: string): any => {
     const section = sectionsData.find(
@@ -187,20 +187,6 @@ export default function AddApplicationPage({
                 ...section.data,
                 [fieldName]: value,
               },
-            }
-          : section
-      )
-    );
-  };
-
-  // Helper function to update an entire section's data
-  const updateSectionData = (sectionName: string, newData: any) => {
-    setSectionsData((prevSections) =>
-      prevSections.map((section) =>
-        section.section === sectionName
-          ? {
-              ...section,
-              data: newData,
             }
           : section
       )
@@ -243,7 +229,7 @@ export default function AddApplicationPage({
   // Validation functions for each step
   const validateContactInfo = (): boolean => {
     const contactData = getSectionData("contact");
-    
+
     if (!contactData.firstName.trim()) {
       setFormError("Ad alanı zorunludur");
       return false;
@@ -267,7 +253,7 @@ export default function AddApplicationPage({
 
   const validateIncidentInfo = (): boolean => {
     const incidentData = getSectionData("incident");
-    
+
     if (!incidentData.incidentDescription.trim()) {
       setFormError("Olay açıklaması zorunludur");
       return false;
@@ -281,8 +267,11 @@ export default function AddApplicationPage({
 
   const validatePassportFiles = (): boolean => {
     const passportData = getSectionData("passport");
-    
-    if (!passportData.employmentFiles || passportData.employmentFiles.length === 0) {
+
+    if (
+      !passportData.employmentFiles ||
+      passportData.employmentFiles.length === 0
+    ) {
       setFormError("En az bir pasaport belgesi yüklemeniz gerekmektedir");
       return false;
     }
@@ -291,8 +280,11 @@ export default function AddApplicationPage({
 
   const validateEmploymentFiles = (): boolean => {
     const employmentData = getSectionData("employment");
-    
-    if (!employmentData.employmentFiles || employmentData.employmentFiles.length === 0) {
+
+    if (
+      !employmentData.employmentFiles ||
+      employmentData.employmentFiles.length === 0
+    ) {
       setFormError("En az bir istihdam belgesi yüklemeniz gerekmektedir");
       return false;
     }
@@ -301,8 +293,11 @@ export default function AddApplicationPage({
 
   const validateRecognitionInfo = (): boolean => {
     const recognitionData = getSectionData("recognition");
-    
-    if (recognitionData.hasDocuments && (!recognitionData.files || recognitionData.files.length === 0)) {
+
+    if (
+      recognitionData.hasDocuments &&
+      (!recognitionData.files || recognitionData.files.length === 0)
+    ) {
       setFormError(
         "Takdir belgesi olduğunu belirttiniz, en az bir belge yüklemeniz gerekmektedir"
       );
@@ -313,7 +308,7 @@ export default function AddApplicationPage({
 
   const validatePaymentFiles = (): boolean => {
     const paymentData = getSectionData("payment");
-    
+
     if (!paymentData.paymentFiles || paymentData.paymentFiles.length === 0) {
       setFormError("En az bir ödeme belgesi yüklemeniz gerekmektedir");
       return false;
@@ -325,11 +320,11 @@ export default function AddApplicationPage({
   const validateCurrentStep = (): boolean => {
     // Clear any previous error
     setFormError(null);
-    
+
     console.log(`Validating step ${currentStep}`);
-    
+
     let isValid = false;
-    
+
     switch (currentStep) {
       case 1:
         isValid = validateContactInfo();
@@ -352,8 +347,6 @@ export default function AddApplicationPage({
       default:
         isValid = true;
     }
-    
-    console.log(`Step ${currentStep} validation result: ${isValid}`);
     return isValid;
   };
 
@@ -362,28 +355,28 @@ export default function AddApplicationPage({
     if (!validateContactInfo()) {
       return;
     }
-    
+
     setIsSubmitting(true);
     setFormError(null);
-    
+
     try {
       const contactData = getSectionData("contact");
-      
+
       console.log("Creating application with data:", contactData);
-      
+
       // Call API to create application with contact data
       const app = await createApplication(contactData);
       console.log("Application created successfully:", app);
-      
+
       // Update state to indicate application has been created
       setApplicationNumber(app.applicationNumber);
       setApplicationId(app.id);
       setApplicationCreated(true);
       setStepsCompleted((prev) => ({ ...prev, 1: true }));
-      
+
       // Move to next step
       setCurrentStep(2);
-      
+
       toast.success("Başvuru başarıyla oluşturuldu!");
     } catch (error) {
       console.error("Error creating application:", error);
@@ -403,45 +396,45 @@ export default function AddApplicationPage({
       console.log("Current step validation failed");
       return;
     }
-    
+
     // Check if application ID exists
     if (!applicationId) {
       console.error("No application ID found");
       setFormError("Başvuru kimliği bulunamadı. Lütfen yeniden başlayın.");
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Get the current section data
       const currentSectionData = sectionsData.find(
         (section) => section.step === currentStep
       );
-      
+
       if (!currentSectionData) {
         throw new Error(`Step data not found for step ${currentStep}`);
       }
-      
+
       console.log("Saving section data:", JSON.stringify(currentSectionData));
-      
+
       // Call API to update step with current section data
       const success = await updateApplicationStep(
         applicationId,
         currentSectionData
       );
-      
+
       if (success) {
         console.log(`Step ${currentStep} saved successfully`);
-        
+
         // Update completion status
         setStepsCompleted((prev) => ({ ...prev, [currentStep]: true }));
-        
+
         // Move to next step
         const nextStep = Math.min(6, currentStep + 1);
         console.log(`Moving to step ${nextStep}`);
         setCurrentStep(nextStep);
-        
+
         toast.success("Adım başarıyla kaydedildi!");
       } else {
         setFormError(
@@ -469,61 +462,52 @@ export default function AddApplicationPage({
   // Submit final form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate the current step first
     if (!validateCurrentStep()) {
       return;
     }
-    
+
     // Check if application ID exists
     if (!applicationId) {
       setFormError("Başvuru kimliği bulunamadı. Lütfen yeniden başlayın.");
       return;
     }
-    
+
     setIsSubmitting(true);
     setFormError(null);
-    
-    try {
-      // Get the current step data
-      const currentSectionData = sectionsData.find(
-        (section) => section.step === currentStep
-      );
-      
-      if (!currentSectionData) {
-        throw new Error(`Step data not found for step ${currentStep}`);
-      }
-      
-      console.log("Submitting final step data:", JSON.stringify(currentSectionData));
-      
-      // Update the final step
-      const success = await updateApplicationStep(
-        applicationId,
-        currentSectionData
-      );
-      
-      if (success) {
-        console.log("Final step saved successfully, submitting application");
-        
-        // Update completion status
-        setStepsCompleted((prev) => ({ ...prev, [currentStep]: true }));
-        
-        // Call the onSubmit callback with all section data
-        onSubmit(sectionsData);
-        
-        toast.success("Başvuru başarıyla tamamlandı!");
-      } else {
-        setFormError(
-          "Başvuru tamamlanırken bir hata oluştu. Lütfen tekrar deneyiniz."
-        );
-      }
-    } catch (error) {
-      console.error("Form submission error:", error);
-      setFormError(
-        "Başvuru gönderilirken bir hata oluştu. Lütfen tekrar deneyiniz."
-      );
-    } finally {
+
+    // Get the current step data
+    const currentSectionData = sectionsData.find(
+      (section) => section.step === currentStep
+    );
+
+    if (!currentSectionData) {
+      throw new Error(`Step data not found for step ${currentStep}`);
+    }
+
+    const success = await updateApplicationStep(
+      applicationId,
+      currentSectionData
+    );
+
+    if (success) {
+      console.log(`Step ${currentStep} saved successfully`);
+      setStepsCompleted((prev) => ({ ...prev, [currentStep]: true }));
       setIsSubmitting(false);
+
+      toast.success("Başvuru başarıyla Kaydedildi! \n Yönlendiriliyorsunuz...");
+
+      // Optionally, you can navigate to another page after submission
+      // For example, navigate to the application list page
+     
+      // Navigate to the application list page
+      navigate(0);
+
+    } else {
+      setFormError(
+        "Adım kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz."
+      );
     }
   };
 
@@ -549,7 +533,7 @@ export default function AddApplicationPage({
       </div>
     </div>
   );
-    
+
   // Render content for each step
   const renderStep = () => {
     const contactData = getSectionData("contact");
@@ -558,7 +542,7 @@ export default function AddApplicationPage({
     const employmentData = getSectionData("employment");
     const recognitionData = getSectionData("recognition");
     const paymentData = getSectionData("payment");
-        
+
     switch (currentStep) {
       case 1:
         return (
@@ -570,7 +554,7 @@ export default function AddApplicationPage({
               "Kişisel Bilgiler Hakkında",
               "Başvuru sahibinin temel iletişim bilgilerini eksiksiz doldurunuz. Telefon numarası benzersiz tanımlayıcı olarak kullanılacaktır."
             )}
-            
+
             {/* Highlight the phone number field as important */}
             <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
               <div className="flex items-start">
@@ -582,7 +566,7 @@ export default function AddApplicationPage({
                 </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -594,7 +578,7 @@ export default function AddApplicationPage({
                   onChange={(e) =>
                     updateSectionField("contact", "firstName", e.target.value)
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
                   required
                   disabled={applicationCreated}
                 />
@@ -609,7 +593,7 @@ export default function AddApplicationPage({
                   onChange={(e) =>
                     updateSectionField("contact", "lastName", e.target.value)
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
                   required
                   disabled={applicationCreated}
                 />
@@ -622,7 +606,7 @@ export default function AddApplicationPage({
                   type="date"
                   id="birthDate"
                   value={
-                    contactData.birthDate instanceof Date 
+                    contactData.birthDate instanceof Date
                       ? contactData.birthDate.toISOString().split("T")[0]
                       : new Date().toISOString().split("T")[0]
                   }
@@ -636,7 +620,7 @@ export default function AddApplicationPage({
                   min={minDateString}
                   max={maxDateString}
                   disabled={applicationCreated}
-                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
                   required
                 />
               </div>
@@ -650,7 +634,7 @@ export default function AddApplicationPage({
                   onChange={(e) =>
                     updateSectionField("contact", "email", e.target.value)
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
                   disabled={applicationCreated}
                 />
               </div>
@@ -666,17 +650,19 @@ export default function AddApplicationPage({
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
-                    type="tel"
-                    value={contactData.telephone}
-                    onChange={(e) =>
-                      updateSectionField("contact", "telephone", e.target.value)
-                    }
-                    className="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-[#292A2D] focus:ring-[#292A2D] sm:text-sm"
-                    placeholder="+90 (___) ___ __ __"
-                    required
-                    disabled={applicationCreated}
-                  />
+                  <div>
+                    <PhoneInput
+                      international
+                      countryCallingCodeEditable={false}
+                      defaultCountry="TR"
+                      value={contactData.telephone}
+                      onChange={(value) =>
+                        updateSectionField("contact", "telephone", value)
+                      }
+                      className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                    />
+                  </div>
+
                   {applicationCreated && (
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-gray-400" />
@@ -688,7 +674,7 @@ export default function AddApplicationPage({
                 </p>
               </div>
             </div>
-            
+
             {!applicationCreated && (
               <button
                 type="button"
@@ -706,7 +692,7 @@ export default function AddApplicationPage({
                 )}
               </button>
             )}
-            
+
             {applicationCreated && (
               <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-start">
@@ -795,20 +781,25 @@ export default function AddApplicationPage({
                 {passportError}
               </div>
             )}
-            
+
             {/* Display current files */}
-            {passportData.employmentFiles && passportData.employmentFiles.length > 0 && (
-              <div className="mt-2">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
-                <ul className="space-y-1">
-                  {passportData.employmentFiles.map((fileUrl: string, index: number) => (
-                    <li key={index} className="text-sm text-gray-600">
-                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {passportData.employmentFiles &&
+              passportData.employmentFiles.length > 0 && (
+                <div className="mt-2">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Yüklenen Dosyalar:
+                  </h4>
+                  <ul className="space-y-1">
+                    {passportData.employmentFiles.map(
+                      (fileUrl: string, index: number) => (
+                        <li key={index} className="text-sm text-gray-600">
+                          {fileUrl.split("/").pop() || `Dosya ${index + 1}`}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
           </div>
         );
       case 4:
@@ -845,20 +836,25 @@ export default function AddApplicationPage({
                 {employmentError}
               </div>
             )}
-            
+
             {/* Display current files */}
-            {employmentData.employmentFiles && employmentData.employmentFiles.length > 0 && (
-              <div className="mt-2">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
-                <ul className="space-y-1">
-                  {employmentData.employmentFiles.map((fileUrl: string, index: number) => (
-                    <li key={index} className="text-sm text-gray-600">
-                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {employmentData.employmentFiles &&
+              employmentData.employmentFiles.length > 0 && (
+                <div className="mt-2">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Yüklenen Dosyalar:
+                  </h4>
+                  <ul className="space-y-1">
+                    {employmentData.employmentFiles.map(
+                      (fileUrl: string, index: number) => (
+                        <li key={index} className="text-sm text-gray-600">
+                          {fileUrl.split("/").pop() || `Dosya ${index + 1}`}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
           </div>
         );
       case 5:
@@ -917,20 +913,26 @@ export default function AddApplicationPage({
                       {recognitionError}
                     </div>
                   )}
-                  
+
                   {/* Display current files */}
-                  {recognitionData.files && recognitionData.files.length > 0 && (
-                    <div className="mt-2">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
-                      <ul className="space-y-1">
-                        {recognitionData.files.map((fileUrl: string, index: number) => (
-                          <li key={index} className="text-sm text-gray-600">
-                            {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {recognitionData.files &&
+                    recognitionData.files.length > 0 && (
+                      <div className="mt-2">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          Yüklenen Dosyalar:
+                        </h4>
+                        <ul className="space-y-1">
+                          {recognitionData.files.map(
+                            (fileUrl: string, index: number) => (
+                              <li key={index} className="text-sm text-gray-600">
+                                {fileUrl.split("/").pop() ||
+                                  `Dosya ${index + 1}`}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
                 </>
               )}
             </div>
@@ -972,20 +974,25 @@ export default function AddApplicationPage({
                 {paymentError}
               </div>
             )}
-            
+
             {/* Display current files */}
-            {paymentData.paymentFiles && paymentData.paymentFiles.length > 0 && (
-              <div className="mt-2">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Yüklenen Dosyalar:</h4>
-                <ul className="space-y-1">
-                  {paymentData.paymentFiles.map((fileUrl: string, index: number) => (
-                    <li key={index} className="text-sm text-gray-600">
-                      {fileUrl.split('/').pop() || `Dosya ${index + 1}`}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {paymentData.paymentFiles &&
+              paymentData.paymentFiles.length > 0 && (
+                <div className="mt-2">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Yüklenen Dosyalar:
+                  </h4>
+                  <ul className="space-y-1">
+                    {paymentData.paymentFiles.map(
+                      (fileUrl: string, index: number) => (
+                        <li key={index} className="text-sm text-gray-600">
+                          {fileUrl.split("/").pop() || `Dosya ${index + 1}`}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
           </div>
         );
       default:
@@ -1021,17 +1028,17 @@ export default function AddApplicationPage({
             </p>
           </div>
         </div>
-        
+
         {applicationId && (
           <div className="text-right">
             <div className="text-sm font-medium text-gray-500">Başvuru No</div>
             <div className="text-base font-semibold text-gray-900">
-              {applicationId}
+              {applicationNumber}
             </div>
           </div>
         )}
       </div>
-      
+
       <div className="bg-white rounded-lg shadow-sm">
         {/* Progress Indicator */}
         <div className="px-6 pt-6">
@@ -1052,7 +1059,7 @@ export default function AddApplicationPage({
                   !isActive &&
                   step.number !== 1 &&
                   !stepsCompleted[step.number - 1];
-                
+
                 return (
                   <div
                     key={step.number}
@@ -1089,7 +1096,7 @@ export default function AddApplicationPage({
             </div>
           </div>
         </div>
-        
+
         <div className="border-b border-gray-200 mt-6">
           <nav className="flex divide-x divide-gray-200">
             {steps.map((step) => {
@@ -1098,7 +1105,7 @@ export default function AddApplicationPage({
                 step.number === 1 ||
                 stepsCompleted[step.number - 1] ||
                 currentStep === step.number;
-              
+
               return (
                 <button
                   key={step.number}
@@ -1121,7 +1128,7 @@ export default function AddApplicationPage({
             })}
           </nav>
         </div>
-        
+
         <div className="p-6">
           {/* Make error message more prominent */}
           {formError && (
@@ -1130,10 +1137,10 @@ export default function AddApplicationPage({
               <span className="font-medium">{formError}</span>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit}>
             {renderStep()}
-            
+
             {/* Only show navigation buttons for steps 2-6 after application is created */}
             {applicationCreated && currentStep > 1 && (
               <div className="mt-6 flex justify-between">
@@ -1144,7 +1151,7 @@ export default function AddApplicationPage({
                 >
                   Önceki
                 </button>
-                
+
                 {currentStep < 6 ? (
                   <button
                     type="button"

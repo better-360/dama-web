@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { logOut, setUserData } from "../store/slices/userSlice";
-import instance from "../http/instance";
 import { getUserTokens, removeTokens } from "../utils/storage";
 import AccessDenied from "../pages/AccessDenied";
 import adminInstance from "../http/adminInstance";

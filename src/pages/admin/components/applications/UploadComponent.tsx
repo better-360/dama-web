@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckCircle, Upload, AlertCircle, File as FileIcon, Loader } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { uploadFileToS3fromAdmin } from "../../../../utils/firebase";
+import { uploadFileToS3fromAdmin } from "../../../../utils/upload";
 
 interface AdminFileUploadComponentProps {
   files: File[];
@@ -164,7 +164,6 @@ const AdminFileUploadComponent: React.FC<AdminFileUploadComponentProps> = ({
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError && setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
-        
         // Set error for this file
         setFileErrors(prev => ({ 
           ...prev, 
