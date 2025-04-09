@@ -10,6 +10,8 @@ import PaymentUpload from "./components/PaymentUpload";
 import ApplicationSummary from "./components/ApplicationSummary";
 import SuccessPage from "./components/SuccessPage";
 import LanguageSelector from "../../components/LanguageSelector";
+import { completeApplication } from "../../http/requests/applicator";
+import { ApplicationType } from "../../types/form";
 
 export default function PreApplicationForm() {
   const [currentPage, setCurrentPage] = useState<
@@ -38,8 +40,9 @@ export default function PreApplicationForm() {
   }>({ hasDocuments: false, files: [] });
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
   
-  const handleSubmitApplication = () => {
+  const handleSubmitApplication = async () => {
     // Here you would typically send the data to your backend
+    await completeApplication(ApplicationType.PRE_APPLICATION)
     setCurrentPage("success");
   };
 

@@ -16,6 +16,8 @@ export interface IApplicator {
       status: string;
       applicationNumber: string;
       preApplicationData: any;
+      preApplicationCompleted:boolean;
+      applicationCompleted:boolean;
       applicationData: any | null;
       createdAt: string;
       updatedAt: string;

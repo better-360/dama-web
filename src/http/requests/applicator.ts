@@ -1,5 +1,7 @@
 import baseApi from "..";
 import { IApplicator, IApplicatorResponse } from "../../types/applicator";
+import { ApplicationType } from "../../types/form";
+import { MyStatusReponse } from "../../types/status";
 import instance from "../instance";
 
 export const requestOTPToken = async (telephone: string) => {
@@ -75,6 +77,22 @@ export const updateApplicationSection = async (data: {
 };
 
 
+export const completeApplication = async (type:ApplicationType): Promise<IApplicatorResponse> => {
+  try {
+    const response = await instance.put(
+      "applications/complete-form",
+      {
+        type
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("Error completing application:", error);
+    throw new Error(error);
+  }
+};
+
+
 export const getApplicationData = async () => {
   try {
     const response = await instance.get(`applications/my-applications`);
@@ -84,3 +102,16 @@ export const getApplicationData = async () => {
     throw new Error(error);
   }
 }
+
+
+
+export const getMyStatus = async ():Promise<MyStatusReponse> => {
+  try {
+    const response = await instance.get("applicator/auth/my-status");
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching status data:", error);
+    throw new Error(error);
+  }
+}
+

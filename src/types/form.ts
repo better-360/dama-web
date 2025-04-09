@@ -89,3 +89,8 @@ export interface ApplicationDataWithId extends ApplicationData {
         applicationId:string;
 }
     
+
+export enum ApplicationType{
+  PRE_APPLICATION = 'PRE_APPLICATION',
+  APPLICATION = 'APPLICATION',
+}

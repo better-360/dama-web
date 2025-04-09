@@ -12,12 +12,14 @@ import ApplicationForm from "../pages/ApplicationForm";
 import NotificationsPage from "../pages/admin/components/notifications";
 import Login from "../pages/Login";
 import FormProtectRoute from "./FormProtectRoute";
+import StatusPage from "../pages/Status";
 
 export default function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Login />} />
+      <Route path="/status" element={<StatusPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       {/* Admin routes */}
       <Route path="/admin" element={

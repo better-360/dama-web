@@ -10,6 +10,7 @@ import LanguageSeletPage from "./Language";
 import { useDispatch } from "react-redux";
 import { loginApplicator } from "../store/slices/applicatorSlice";
 import { useNavigate } from "react-router-dom";
+import instance from "../http/instance";
 
 export default function Login() {
   const [lang, setLang] = useState<string | null>();
@@ -76,29 +77,37 @@ export default function Login() {
 
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.every((digit) => digit !== "")) {
-      try {
-        if (!phoneNumber) {
-          throw new Error("Phone number is missing");
-        }
-        const res = await verifyOTPToken(phoneNumber, otp.join(""));
-        dispatch(loginApplicator(res));
-        saveUserTokens(res.tokens);
-        if (res.applicator.status === "APPLICATOR") {
-          navigate("/forms/pre-application", { replace: true });
-        } else if (res.applicator.status === "CLIENT") {
-          navigate("/forms/application-form", { replace: true });
-        } else if (res.applicator.status === "APPOINTMENT_SCHEDULED") {
-          toast.success("You have already scheduled an appointment");
-        } else {
-          toast.error("Invalid User");
-        }
-        console.log(res);
-      } catch (error: any) {
-        toast.error("Invalid OTP");
+  
+    if (!otp.every((digit) => digit !== "")) return;
+  
+    if (!phoneNumber) {
+      toast.error("Phone number is missing");
+      return;
+    }
+  
+    try {
+      const res = await verifyOTPToken(phoneNumber, otp.join(""));
+      dispatch(loginApplicator(res));
+      saveUserTokens(res.tokens);
+  
+      const { status, application } = res.applicator;
+  
+      if (status === "APPLICATOR") {
+        navigate(application.preApplicationCompleted ? "/status" : "/forms/pre-application", { replace: true });
+      } else if (status === "CLIENT") {
+        navigate(application.applicationCompleted ? "/status" : "/forms/application-form", { replace: true });
+      } else if (status === "APPOINTMENT_SCHEDULED") {
+        navigate("/status", { replace: true });
+      } else {
+        toast.error("Invalid User or Status Type");
       }
+  
+      console.log(res);
+    } catch (error: any) {
+      toast.error("Invalid OTP");
     }
   };
+  
 
   if (!lang) {
     return <LanguageSeletPage setLang={setLang} />;
