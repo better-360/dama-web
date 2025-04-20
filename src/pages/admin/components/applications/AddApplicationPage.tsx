@@ -196,7 +196,7 @@ export default function AddApplicationPage({
   // Handle file uploads for each section
   const handlePassportFileUpload = (fileKeys: string[]) => {
     console.log("Passport file keys received:", fileKeys);
-    const currentFiles = getSectionData("passport")?.employmentFiles || [];
+    const currentFiles = getSectionData("passport")?.passportFiles || [];
     const updatedFiles = [...currentFiles, ...fileKeys];
     console.log("Updated passport files:", updatedFiles);
     updateSectionField("passport", "employmentFiles", updatedFiles);
@@ -269,8 +269,8 @@ export default function AddApplicationPage({
     const passportData = getSectionData("passport");
 
     if (
-      !passportData.employmentFiles ||
-      passportData.employmentFiles.length === 0
+      !passportData.passportFiles ||
+      passportData.passportFiles.length === 0
     ) {
       setFormError("En az bir pasaport belgesi yüklemeniz gerekmektedir");
       return false;
@@ -762,7 +762,7 @@ export default function AddApplicationPage({
               setFiles={setPassportFiles}
               setError={setPassportError}
               applicationNumber={applicationNumber}
-              fileUrls={passportData.employmentFiles}
+              fileUrls={passportData.passportFiles}
               folder="passport"
               label="Pasaport"
               onUploadComplete={handlePassportFileUpload}
@@ -783,14 +783,14 @@ export default function AddApplicationPage({
             )}
 
             {/* Display current files */}
-            {passportData.employmentFiles &&
-              passportData.employmentFiles.length > 0 && (
+            {passportData.passportFiles &&
+              passportData.passportFiles.length > 0 && (
                 <div className="mt-2">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">
                     Yüklenen Dosyalar:
                   </h4>
                   <ul className="space-y-1">
-                    {passportData.employmentFiles.map(
+                    {passportData.passportFiles.map(
                       (fileUrl: string, index: number) => (
                         <li key={index} className="text-sm text-gray-600">
                           {fileUrl.split("/").pop() || `Dosya ${index + 1}`}
