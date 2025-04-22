@@ -53,31 +53,23 @@
     "description": "To complete your application, we'll need the following documents. Please ensure you have these ready before proceeding.",
     "warning": "Your application may be delayed or cannot be completed if you're unable to upload the required documents.",
     "documents": [
-      {
-        "title": "Passport and Travel Records",
-        "description": "Your passport and entry-exit records from the period you worked at the bases"
-      },
-      {
-        "title": "Employment Documents",
-        "description": "Documents showing your employment with the company and your position (employment contracts, assignment letters, etc.)"
-      },
-      {
-        "title": "Recognition Documents",
-        "description": "If available, any recognition, appreciation, or achievement certificates from your workplace"
-      },
-      {
-        "title": "Payment Records",
-        "description": "Bank statements or payment records showing your salary payments"
-      },
-      {
-        "title": "Payment Records",
-        "description": "Bank statements or payment records showing your salary payments"
-      },
-      {
-        "title": "Payment Records",
-        "description": "Bank statements or payment records showing your salary payments"
-      }
-    ],
+  {
+    "title": "İstihdam Belgeleri",
+    "description": "Şirketteki iş ilişki ve pozisyonunu gösteren belgeler (iş sözleşmeleri, görevlendirme yazıları vb.)"
+  },
+  {
+    "title": "Takdir Belgeleri",
+    "description": "Varsa iş yerinden aldığın takdir, teşekkür veya başarı sertifikaları"
+  },
+  {
+    "title": "Ödeme Kayıtları",
+    "description": "Maaş ödemelerini gösteren banka hesap özetleri veya ödeme kimlikleri"
+  },
+  {
+    "title": "Tanıklar ve Kanıtlara ait Bilgiler",
+    "description": "Evidence and witness information regarding your employment relationship and position in the company"
+  }
+],
     "continue": "I Have the Documents, Continue",
     "note": "All documents will be stored securely and used only for your application."
   },
