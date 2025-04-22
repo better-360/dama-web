@@ -32,8 +32,14 @@ export const setAsClient = async (applicatorId: string) => {
   };
   
 
+
 export const getClients = async () => {
     const response = await adminInstance.get("admin/clients");
+    return response.data;
+  };
+
+  export const getOTPTokens = async () => {
+    const response = await adminInstance.get("admin/otp-tokens");
     return response.data;
   };
 
