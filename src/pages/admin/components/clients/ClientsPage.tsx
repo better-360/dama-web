@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ClientsTable from './ClientsTable';
 import ClientDetailPage from './ClientDetailPage';
 import type { Client } from '../../types/client';
+import { deleteApplication } from '../../../../http/requests/admin';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -38,8 +39,17 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Bu müvekkili silmek istediğinizden emin misiniz?')) {
+    if (window.confirm('Bu Clientı silmek istediğinizden emin misiniz?')) {
+     try {
+      setLoading(true);
+      await deleteApplication(id);
       setClients(clients.filter(client => client.id !== id));
+     } catch (error) {
+      console.error('Error deleting application:', error);
+      setError('Başvuru silinirken bir hata oluştu');
+     } finally {
+      setLoading(false);
+     }
     }
   };
 
