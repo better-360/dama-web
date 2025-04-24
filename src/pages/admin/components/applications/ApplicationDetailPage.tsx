@@ -4,7 +4,10 @@ import type { ApplicationDetail } from '../../types/applicationDetail';
 import { sectionLabels } from '../../types/applicationDetail';
 import AppointmentModal from './AppointmentModal';
 import ConfirmationModal from './ConfirmationModal';
-import { getApplication, getFileUrl, setAsClient } from '../../../../http/requests/admin';
+import { getApplication, getFileUrl, setAsClient, updateApplicationStatus } from '../../../../http/requests/admin';
+import { useNavigate } from 'react-router-dom';
+import { ApplicationStatus } from '../../../../types/status';
+import toast from 'react-hot-toast';
 
 interface ApplicationDetailPageProps {
   id: string;
@@ -17,10 +20,15 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
   const [error, setError] = useState<string | null>(null);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('')
 
+
+  const navigate=useNavigate();
   useEffect(() => {
     fetchApplicationDetail();
   }, [id]);
+
+
 
   const fetchApplicationDetail = async () => {
     try {
@@ -70,6 +78,7 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
           status: 'CLIENT'
         };
         setApplication(updatedApplication);
+        navigate('/admin/clients',{replace:true})
       }
       
       // You could show a success message here
@@ -79,6 +88,29 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     }
   };
 
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as ApplicationStatus
+    setSelectedStatus(newStatus)
+
+    try {
+      if(!application||application==null) {
+       return toast.error('Başvuru alınamadı')
+      }
+      await updateApplicationStatus(application.applicatorId,newStatus)
+      toast.success('Başvuru durumu güncellendi')
+     
+      setApplication((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: newStatus,
+        };
+      });
+    } catch (err) {
+      console.error(err)
+      toast.error('Güncelleme başarısız')
+    }
+  }
   
 
   const getFilesForSection = (section: any) => {
@@ -171,7 +203,23 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
           </div>
         </div>
         
-        <div className="flex space-x-3">
+        <div className="flex space-x-3">  
+          {/* ——— Status Dropdown ——— */}
+      <select
+        value={selectedStatus}
+        onChange={handleStatusChange}
+        className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-sm"
+      >
+        <option value="" disabled>
+       Select a Status
+        </option>
+        {Object.values(ApplicationStatus).map((status) => (
+          <option key={status} value={status}>
+            {status.split('_').join(' ')}  {/* alt çizgileri boşlukla değiştirir */}
+          </option>
+        ))}
+      </select>
+
           <button
             onClick={() => setIsConfirmationModalOpen(true)}
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

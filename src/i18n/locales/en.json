@@ -147,7 +147,9 @@
       "subtitle": "PDF or image files are accepted"
     },
     "uploadedFiles": "Uploaded Documents",
-    "continue": "Continue"
+    "continue": "Continue",
+    "saving":"Saving..."
+
   },
   "employment": {
     "employerInfo": "Employer Information",

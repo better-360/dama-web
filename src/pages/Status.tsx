@@ -201,7 +201,7 @@ const StatusPage = () => {
 
       <main className="flex-grow container mx-auto py-8 px-4 md:px-8">
         {/* Müvekkil formu hatırlatma kutusu - formCompleted false ise göster */}
-        {!clientInfo.application.applicationCompleted && (
+        {(!clientInfo.application.applicationCompleted &&clientInfo.application.status!==ApplicationStatus.PRE_APPLICATION) && (
           <div className="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-lg shadow-md mb-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between">
               <div className="mb-4 md:mb-0">

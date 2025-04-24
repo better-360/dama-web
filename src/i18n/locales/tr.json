@@ -142,7 +142,8 @@
       "subtitle": "PDF veya resim dosyaları kabul edilmektedir"
     },
     "uploadedFiles": "Yüklenen Belgeler",
-    "continue": "Devam Et"
+    "continue": "Devam Et",
+    "saving":"Kaydediliyor..."
   },
   "employment": {
   "employerInfo": "İşveren Bilgileri",

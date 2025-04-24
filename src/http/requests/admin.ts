@@ -1,4 +1,5 @@
 import { IAppointmentProps } from "../../types/applicator";
+import { ApplicationStatus } from "../../types/status";
 import adminInstance from "../adminInstance";
 
 export const getSystemStats = async () => {
@@ -66,3 +67,13 @@ export const getAppointments = async () => {
     return response.data;
   };
   
+
+  export const updateApplicationStatus = async (applicatorId: string,status:ApplicationStatus) => {
+    const response = await adminInstance.patch(
+      `admin/application/update-app-status`,{
+        applicatorId,
+        status
+      }
+    );
+    return response.data;
+  };

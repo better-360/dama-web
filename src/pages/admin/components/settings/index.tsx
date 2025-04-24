@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getOTPTokens } from "../../../../http/requests/admin";
+import {getOTPTokens} from "../../../../http/requests/admin";
 
 export default function Settings() {
   const [tokenList, setTokenList] = useState<any[]>([]);

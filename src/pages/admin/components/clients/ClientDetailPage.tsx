@@ -3,7 +3,9 @@ import { ArrowLeft, FileText, Download, Link as LinkIcon } from "lucide-react";
 import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
 import { sectionLabels as applicationSectionLabels } from "../../types/clientDetail";
-import { getApplication, getFileUrl } from "../../../../http/requests/admin";
+import { getApplication, getFileUrl, updateApplicationStatus } from "../../../../http/requests/admin";
+import { ApplicationStatus } from "../../../../types/status";
+import toast from "react-hot-toast";
 
 interface ClientDetailPageProps {
   id: string;
@@ -19,6 +21,8 @@ export default function ClientDetailPage({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('')
+
   const [activeTab, setActiveTab] = useState<"pre-application" | "application">(
     "pre-application"
   );
@@ -61,6 +65,30 @@ export default function ClientDetailPage({
   };
 
 
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as ApplicationStatus
+    setSelectedStatus(newStatus)
+
+    try {
+      if(!application||application==null) {
+       return toast.error('Başvuru alınamadı')
+      }
+      await updateApplicationStatus(application.applicatorId,newStatus)
+      toast.success('Başvuru durumu güncellendi')
+     
+      setApplication((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: newStatus,
+        };
+      });
+    } catch (err) {
+      console.error(err)
+      toast.error('Güncelleme başarısız')
+    }
+  }
+  
 
   const getFileLink = async (file: string) => {
     try {
@@ -436,7 +464,28 @@ export default function ClientDetailPage({
             </p>
           </div>
         </div>
+        <div className="">
+          <p className="text-sm text-gray-500">Update Status</p>
+          {/* ——— Status Dropdown ——— */}
+      <select
+        value={selectedStatus}
+        onChange={handleStatusChange}
+        className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-sm"
+      >
+        <option value="" disabled>
+       Select a Status
+        </option>
+        {Object.values(ApplicationStatus).map((status) => (
+          <option key={status} value={status}>
+            {status.split('_').join(' ')}  {/* alt çizgileri boşlukla değiştirir */}
+          </option>
+        ))}
+      </select>
+
+        </div>
       </div>
+
+          
 
       <div className="bg-white rounded-lg shadow-sm">
         <div className="border-b border-gray-200">
