@@ -11,7 +11,6 @@ import PostEmployment from "./components/PostEmployment";
 import EvidenceWitness from "./components/EvidenceWitness";
 import Summary from "./components/Summary";
 import SubmissionComplete from "./components/SubmissionComplete";
-import IntroPage from "./components/IntroPage";
 import RequirementsPage from "./components/RequirementsPage";
 import { ApplicationType } from "../../types/form";
 
@@ -71,7 +70,6 @@ interface ApplicationData {
 }
 
 type FormStep =
-  | "intro"
   | "requirements"
   | "marital"
   | "employment"
@@ -82,7 +80,7 @@ type FormStep =
   | "complete";
 
 export default function ApplicationForm() {
-  const [currentStep, setCurrentStep] = useState<FormStep>("intro");
+  const [currentStep, setCurrentStep] = useState<FormStep>("requirements");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -215,9 +213,6 @@ export default function ApplicationForm() {
 
   const handleBack = () => {
     switch (currentStep) {
-      case "requirements":
-        setCurrentStep("intro");
-        break;
       case "marital":
         setCurrentStep("requirements");
         break;
@@ -261,10 +256,6 @@ export default function ApplicationForm() {
         </div>
       </div>
     );
-  }
-
-  if (currentStep === "intro") {
-    return <IntroPage onComplete={() => setCurrentStep("requirements")} />;
   }
 
   if (currentStep === "requirements") {
