@@ -61,14 +61,14 @@ export default function ClientDetailPage({
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setEditData(prev => ({
+    setEditData((prev:any) => ({
       ...prev,
       [field]: value
     }));
   };
 
   const handleNestedInputChange = (parentField: string, field: string, value: any) => {
-    setEditData(prev => ({
+    setEditData((prev:any) => ({
       ...prev,
       [parentField]: {
         ...prev[parentField],

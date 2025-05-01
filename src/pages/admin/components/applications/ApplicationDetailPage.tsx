@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, FileText, Download, Calendar, UserPlus } from 'lucide-react';
+import { ArrowLeft, FileText, Download, Calendar, UserPlus, Edit, Save, X } from 'lucide-react';
 import type { ApplicationDetail } from '../../types/applicationDetail';
 import { sectionLabels } from '../../types/applicationDetail';
 import AppointmentModal from './AppointmentModal';
 import ConfirmationModal from './ConfirmationModal';
-import { getApplication, getFileUrl, setAsClient, updateApplicationStatus } from '../../../../http/requests/admin';
+import { getApplication, getFileUrl, setAsClient, updateApplicationStatus, updateApplication } from '../../../../http/requests/admin';
 import { useNavigate } from 'react-router-dom';
 import { ApplicationStatus } from '../../../../types/status';
 import toast from 'react-hot-toast';
@@ -20,15 +20,15 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
   const [error, setError] = useState<string | null>(null);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('')
-
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('');
+  const [editMode, setEditMode] = useState(false);
+  const [editingSection, setEditingSection] = useState<{ index: number } | null>(null);
+  const [editData, setEditData] = useState<any>(null);
 
   const navigate=useNavigate();
   useEffect(() => {
     fetchApplicationDetail();
   }, [id]);
-
-
 
   const fetchApplicationDetail = async () => {
     try {
@@ -42,6 +42,58 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     } catch (err) {
       console.error('Error in fetchApplicationDetail:', err);
       setError('Başvuru detayları yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditing = (index: number, data: any) => {
+    setEditingSection({ index });
+    setEditData({ ...data });
+    setEditMode(true);
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setEditData(null);
+    setEditMode(false);
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setEditData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const saveChanges = async () => {
+    if (!editingSection || !application) return;
+
+    try {
+      setLoading(true);
+      await updateApplication(application.applicatorId, 'preApplicationData', editingSection.index, editData);
+      
+      // Update local state
+      setApplication(prev => {
+        if (!prev) return null;
+        
+        const updatedData = [...prev.preApplicationData];
+        updatedData[editingSection.index] = {
+          ...updatedData[editingSection.index],
+          data: editData
+        };
+        
+        return {
+          ...prev,
+          preApplicationData: updatedData
+        };
+      });
+      
+      toast.success('Bilgiler başarıyla güncellendi');
+      cancelEditing();
+    } catch (err) {
+      console.error('Error updating application section:', err);
+      toast.error('Güncelleme başarısız oldu');
     } finally {
       setLoading(false);
     }
@@ -244,23 +296,76 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
         </div>
         
         <div className="divide-y divide-gray-200">
-          {application.preApplicationData.map((section) => (
-            <div key={section.section} className="p-6">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">
-                {sectionLabels[section.section]}
-              </h4>
+          {application.preApplicationData.map((section, sectionIndex) => (
+            <div key={section.section} className="p-6 relative">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-medium text-gray-900">
+                  {sectionLabels[section.section]}
+                </h4>
+                {editMode && editingSection?.index === sectionIndex ? (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                    >
+                      <Save className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => startEditing(sectionIndex, section.data)}
+                    className="p-1 bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               
               {section.section === 'contact' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Ad Soyad</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {section.data.firstName} {section.data.lastName}
-                    </p>
+                    {editMode && editingSection?.index === sectionIndex ? (
+                      <div className="mt-1 flex space-x-2">
+                        <input
+                          type="text"
+                          value={editData.firstName || ''}
+                          onChange={(e) => handleInputChange('firstName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          placeholder="Ad"
+                        />
+                        <input
+                          type="text"
+                          value={editData.lastName || ''}
+                          onChange={(e) => handleInputChange('lastName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          placeholder="Soyad"
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {section.data.firstName} {section.data.lastName}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">E-posta</label>
-                    <p className="mt-1 text-sm text-gray-900">{section.data.email}</p>
+                    {editMode && editingSection?.index === sectionIndex ? (
+                      <input
+                        type="email"
+                        value={editData.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">{section.data.email}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -268,9 +373,18 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
               {section.section === 'incident' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Olay Açıklaması</label>
+                  {editMode && editingSection?.index === sectionIndex ? (
+                    <textarea
+                      value={editData.incidentDescription || ''}
+                      onChange={(e) => handleInputChange('incidentDescription', e.target.value)}
+                      className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      rows={5}
+                    />
+                  ) : (
                     <p className="mt-2 text-sm text-gray-900 break-words whitespace-pre-wrap">
-                    {section.data.incidentDescription}
+                      {section.data.incidentDescription}
                     </p>
+                  )}
                 </div>
               )}
 
