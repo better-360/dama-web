@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, FileText, Download, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, FileText, Download, Link as LinkIcon, Edit, Save, X } from "lucide-react";
 import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
 import { sectionLabels as applicationSectionLabels } from "../../types/clientDetail";
-import { getApplication, getFileUrl, updateApplicationStatus } from "../../../../http/requests/admin";
+import { getApplication, getFileUrl, updateApplicationStatus, updateApplication } from "../../../../http/requests/admin";
 import { ApplicationStatus } from "../../../../types/status";
 import toast from "react-hot-toast";
 
@@ -22,6 +22,9 @@ export default function ClientDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('')
+  const [editMode, setEditMode] = useState(false);
+  const [editingSection, setEditingSection] = useState<{ type: 'preApplicationData' | 'applicationData', index: number } | null>(null);
+  const [editData, setEditData] = useState<any>(null);
 
   const [activeTab, setActiveTab] = useState<"pre-application" | "application">(
     "pre-application"
@@ -40,6 +43,68 @@ export default function ClientDetailPage({
     } catch (err) {
       console.error("Error fetching client detail:", err);
       setError("Müvekkil detayları yüklenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditing = (type: 'preApplicationData' | 'applicationData', index: number, data: any) => {
+    setEditingSection({ type, index });
+    setEditData({ ...data });
+    setEditMode(true);
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setEditData(null);
+    setEditMode(false);
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setEditData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleNestedInputChange = (parentField: string, field: string, value: any) => {
+    setEditData(prev => ({
+      ...prev,
+      [parentField]: {
+        ...prev[parentField],
+        [field]: value
+      }
+    }));
+  };
+
+  const saveChanges = async () => {
+    if (!editingSection || !application) return;
+
+    try {
+      setLoading(true);
+      await updateApplication(application.applicatorId, editingSection.type, editingSection.index, editData);
+      
+      // Update local state
+      setApplication(prev => {
+        if (!prev) return null;
+        
+        const updatedData = [...prev[editingSection.type]];
+        updatedData[editingSection.index] = {
+          ...updatedData[editingSection.index],
+          data: editData
+        };
+        
+        return {
+          ...prev,
+          [editingSection.type]: updatedData
+        };
+      });
+      
+      toast.success('Bilgiler başarıyla güncellendi');
+      cancelEditing();
+    } catch (err) {
+      console.error('Error updating application section:', err);
+      toast.error('Güncelleme başarısız oldu');
     } finally {
       setLoading(false);
     }
@@ -128,11 +193,36 @@ export default function ClientDetailPage({
 
     return (
       <div className="divide-y divide-gray-200">
-        {application.preApplicationData.map((section) => (
-          <div key={section.section} className="p-6">
-            <h4 className="text-lg font-medium text-gray-900 mb-4">
-              {preApplicationSectionLabels[section.section]}
-            </h4>
+        {application.preApplicationData.map((section, sectionIndex) => (
+          <div key={section.section} className="p-6 relative">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium text-gray-900">
+                {preApplicationSectionLabels[section.section]}
+              </h4>
+              {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={saveChanges}
+                    className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                  >
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => startEditing('preApplicationData', sectionIndex, section.data)}
+                  className="p-1 bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
             {section.section === "contact" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -140,17 +230,45 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500">
                     Ad Soyad
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {section.data.firstName} {section.data.lastName}
-                  </p>
+                  {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
+                    <div className="mt-1 flex space-x-2">
+                      <input
+                        type="text"
+                        value={editData.firstName || ''}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Ad"
+                      />
+                      <input
+                        type="text"
+                        value={editData.lastName || ''}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Soyad"
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {section.data.firstName} {section.data.lastName}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     E-posta
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {section.data.email}
-                  </p>
+                  {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="email"
+                      value={editData.email || ''}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {section.data.email}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -160,9 +278,18 @@ export default function ClientDetailPage({
                 <label className="block text-sm font-medium text-gray-500">
                   Olay Açıklaması
                 </label>
-                <p className="mt-2 text-sm text-gray-900 whitespace-pre-wrap">
-                  {section.data.incidentDescription}
-                </p>
+                {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
+                  <textarea
+                    value={editData.incidentDescription || ''}
+                    onChange={(e) => handleInputChange('incidentDescription', e.target.value)}
+                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    rows={5}
+                  />
+                ) : (
+                  <p className="mt-2 text-sm text-gray-900 whitespace-pre-wrap">
+                    {section.data.incidentDescription}
+                  </p>
+                )}
               </div>
             )}
 
@@ -184,11 +311,36 @@ export default function ClientDetailPage({
   
     return (
       <div className="divide-y divide-gray-200">
-        {application.applicationData.map((section: any) => (
-          <div key={section.section} className="p-6">
-            <h4 className="text-lg font-medium text-gray-900 mb-4">
-              {applicationSectionLabels[section.section]}
-            </h4>
+        {application.applicationData.map((section: any, sectionIndex: number) => (
+          <div key={section.section} className="p-6 relative">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium text-gray-900">
+                {applicationSectionLabels[section.section]}
+              </h4>
+              {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={saveChanges}
+                    className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                  >
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => startEditing('applicationData', sectionIndex, section.data)}
+                  className="p-1 bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              )}
+            </div>
   
             {section.section === "marital" && (
               <div className="space-y-4">
@@ -196,30 +348,113 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500">
                     Medeni Durum
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.maritalStatus)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <select
+                      value={editData.maritalStatus || ''}
+                      onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="">Seçiniz</option>
+                      <option value="Bekar">Bekar</option>
+                      <option value="Evli">Evli</option>
+                      <option value="Boşanmış">Boşanmış</option>
+                    </select>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.maritalStatus)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Eş Adı
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.spouseName)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.spouseName || ''}
+                      onChange={(e) => handleInputChange('spouseName', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.spouseName)}
+                    </p>
+                  )}
                 </div>
-                {section.data.hasChildren && (
+                {/* Çocuk bilgileri */}
+                {(section.data.hasChildren || (editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && editData.hasChildren)) && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Çocuklar
-                    </label>
-                    <div className="mt-2 space-y-2">
-                      {section.data.children.map((child: any, index: number) => (
-                        <div key={index} className="text-sm text-gray-900">
-                          {safe(child.name)} - {safe(child.birthDate)}
-                        </div>
-                      ))}
+                    <div className="flex items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-500 mr-3">
+                        Çocuklar
+                      </label>
+                      {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && (
+                        <input
+                          type="checkbox"
+                          checked={editData.hasChildren || false}
+                          onChange={(e) => handleInputChange('hasChildren', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      )}
                     </div>
+                    
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && editData.hasChildren ? (
+                      <div className="space-y-2">
+                        {(editData.children || []).map((child: any, childIndex: number) => (
+                          <div key={childIndex} className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={child.name || ''}
+                              onChange={(e) => {
+                                const newChildren = [...editData.children];
+                                newChildren[childIndex] = {...newChildren[childIndex], name: e.target.value};
+                                handleInputChange('children', newChildren);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Çocuk adı"
+                            />
+                            <input
+                              type="date"
+                              value={child.birthDate || ''}
+                              onChange={(e) => {
+                                const newChildren = [...editData.children];
+                                newChildren[childIndex] = {...newChildren[childIndex], birthDate: e.target.value};
+                                handleInputChange('children', newChildren);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            />
+                            <button
+                              onClick={() => {
+                                const newChildren = [...editData.children];
+                                newChildren.splice(childIndex, 1);
+                                handleInputChange('children', newChildren);
+                              }}
+                              className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const newChildren = [...(editData.children || []), { name: '', birthDate: '' }];
+                            handleInputChange('children', newChildren);
+                          }}
+                          className="px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-sm"
+                        >
+                          Çocuk Ekle
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {section.data.children && section.data.children.map((child: any, index: number) => (
+                          <div key={index} className="text-sm text-gray-900">
+                            {safe(child.name)} - {safe(child.birthDate)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -231,52 +466,71 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500">
                     İşveren
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.employerName)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.employerName || ''}
+                      onChange={(e) => handleInputChange('employerName', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.employerName)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Pozisyon
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.position)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.position || ''}
+                      onChange={(e) => handleInputChange('position', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.position)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Maaş
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.salary)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.salary || ''}
+                      onChange={(e) => handleInputChange('salary', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.salary)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Başlangıç Tarihi
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.startDate)}
-                  </p>
-                </div>
-                {section.data.hasContract && section.data.contractFile && (
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-500 mb-2">
-                      Sözleşme
-                    </label>
-                    <p
-                      onClick={() => getFileLink(section.data.contractFile)}
-                      
-                      className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors w-fit"
-                    >
-                      <FileText className="w-5 h-5 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-700">
-                        Sözleşme Dosyası
-                      </span>
-                      <Download className="w-4 h-4 text-gray-500 ml-2" />
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="date"
+                      value={editData.startDate || ''}
+                      onChange={(e) => handleInputChange('startDate', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.startDate)}
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
+                {/* Sözleşme dosyası */}
               </div>
             )}
   
@@ -286,60 +540,87 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500">
                     Üsler
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.bases)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.bases || ''}
+                      onChange={(e) => handleInputChange('bases', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.bases)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Günlük Çalışma Saati
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.dailyHours)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="number"
+                      value={editData.dailyHours || ''}
+                      onChange={(e) => handleInputChange('dailyHours', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.dailyHours)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Haftalık Çalışma Günü
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.weeklyDays)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="number"
+                      value={editData.weeklyDays || ''}
+                      onChange={(e) => handleInputChange('weeklyDays', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.weeklyDays)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Son Çalışma Tarihi
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.lastWorkDate)}
-                  </p>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="date"
+                      value={editData.lastWorkDate || ''}
+                      onChange={(e) => handleInputChange('lastWorkDate', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.lastWorkDate)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Yönetici
                   </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {safe(section.data.supervisorName)}
-                  </p>
-                </div>
-                {section.data.loaFile && (
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-500 mb-2">
-                     LOA File
-                    </label>
-                    <p
-                      onClick={() => getFileLink(section.data.loaFile)}
-                      
-                      className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors w-fit"
-                    >
-                      <FileText className="w-5 h-5 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-700">
-                      Loa Dosyası
-                      </span>
-                      <Download className="w-4 h-4 text-gray-500 ml-2" />
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <input
+                      type="text"
+                      value={editData.supervisorName || ''}
+                      onChange={(e) => handleInputChange('supervisorName', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {safe(section.data.supervisorName)}
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
   
@@ -350,17 +631,35 @@ export default function ClientDetailPage({
                     <label className="block text-sm font-medium text-gray-500">
                       Şu Anki Şirket
                     </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.currentCompany??'')}
-                    </p>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.currentCompany || ''}
+                        onChange={(e) => handleInputChange('currentCompany', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.currentCompany)}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">
                       Şu Anki Maaş
                     </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.currentSalary)}
-                    </p>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.currentSalary || ''}
+                        onChange={(e) => handleInputChange('currentSalary', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.currentSalary)}
+                      </p>
+                    )}
                   </div>
                 </div>
   
@@ -368,36 +667,158 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500 mb-2">
                     Önceki İşler
                   </label>
-                  <div className="space-y-3">
-                    {section.data.previousJobs.map((job: any, index: number) => (
-                      <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900">
-                          {safe(job.company)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {safe(job.startDate)} - {safe(job.endDate)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <div className="space-y-2">
+                      {(editData.previousJobs || []).map((job: any, jobIndex: number) => (
+                        <div key={jobIndex} className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={job.company || ''}
+                            onChange={(e) => {
+                              const newJobs = [...editData.previousJobs];
+                              newJobs[jobIndex] = {...newJobs[jobIndex], company: e.target.value};
+                              handleInputChange('previousJobs', newJobs);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            placeholder="Şirket"
+                          />
+                          <input
+                            type="date"
+                            value={job.startDate || ''}
+                            onChange={(e) => {
+                              const newJobs = [...editData.previousJobs];
+                              newJobs[jobIndex] = {...newJobs[jobIndex], startDate: e.target.value};
+                              handleInputChange('previousJobs', newJobs);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            placeholder="Başlangıç"
+                          />
+                          <input
+                            type="date"
+                            value={job.endDate || ''}
+                            onChange={(e) => {
+                              const newJobs = [...editData.previousJobs];
+                              newJobs[jobIndex] = {...newJobs[jobIndex], endDate: e.target.value};
+                              handleInputChange('previousJobs', newJobs);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            placeholder="Bitiş"
+                          />
+                          <button
+                            onClick={() => {
+                              const newJobs = [...editData.previousJobs];
+                              newJobs.splice(jobIndex, 1);
+                              handleInputChange('previousJobs', newJobs);
+                            }}
+                            className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const newJobs = [...(editData.previousJobs || []), { company: '', startDate: '', endDate: '' }];
+                          handleInputChange('previousJobs', newJobs);
+                        }}
+                        className="px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-sm"
+                      >
+                        İş Ekle
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {section.data.previousJobs && section.data.previousJobs.map((job: any, index: number) => (
+                        <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900">
+                            {safe(job.company)}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {safe(job.startDate)} - {safe(job.endDate)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
   
             {section.section === "evidenceWitness" && (
               <div className="space-y-6">
-                {section.data.hasWitnesses && (
+                {(section.data.hasWitnesses || (editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && editData.hasWitnesses)) && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-2">
-                      Tanıklar
-                    </label>
-                    <div className="space-y-2">
-                      {section.data.witnesses.map((witness: any, index: number) => (
-                        <div key={index} className="text-sm text-gray-900">
-                          {`${safe(witness.firstName)} ${safe(witness.lastName)}`}
-                        </div>
-                      ))}
+                    <div className="flex items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-500 mr-3">
+                        Tanıklar
+                      </label>
+                      {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && (
+                        <input
+                          type="checkbox"
+                          checked={editData.hasWitnesses || false}
+                          onChange={(e) => handleInputChange('hasWitnesses', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      )}
                     </div>
+                    
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && editData.hasWitnesses ? (
+                      <div className="space-y-2">
+                        {(editData.witnesses || []).map((witness: any, witnessIndex: number) => (
+                          <div key={witnessIndex} className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={witness.firstName || ''}
+                              onChange={(e) => {
+                                const newWitnesses = [...editData.witnesses];
+                                newWitnesses[witnessIndex] = {...newWitnesses[witnessIndex], firstName: e.target.value};
+                                handleInputChange('witnesses', newWitnesses);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Ad"
+                            />
+                            <input
+                              type="text"
+                              value={witness.lastName || ''}
+                              onChange={(e) => {
+                                const newWitnesses = [...editData.witnesses];
+                                newWitnesses[witnessIndex] = {...newWitnesses[witnessIndex], lastName: e.target.value};
+                                handleInputChange('witnesses', newWitnesses);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Soyad"
+                            />
+                            <button
+                              onClick={() => {
+                                const newWitnesses = [...editData.witnesses];
+                                newWitnesses.splice(witnessIndex, 1);
+                                handleInputChange('witnesses', newWitnesses);
+                              }}
+                              className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const newWitnesses = [...(editData.witnesses || []), { firstName: '', lastName: '' }];
+                            handleInputChange('witnesses', newWitnesses);
+                          }}
+                          className="px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-sm"
+                        >
+                          Tanık Ekle
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {section.data.witnesses && section.data.witnesses.map((witness: any, index: number) => (
+                          <div key={index} className="text-sm text-gray-900">
+                            {`${safe(witness.firstName)} ${safe(witness.lastName)}`}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
   
@@ -405,20 +826,59 @@ export default function ClientDetailPage({
                   <label className="block text-sm font-medium text-gray-500 mb-2">
                     Kanıt Bağlantıları
                   </label>
-                  <div className="space-y-2">
-                    {section.data.evidenceLinks.map((evidenceLink:any, index: number) => (
-                      <a
-                        key={index}
-                        href={evidenceLink.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                    <div className="space-y-2">
+                      {(editData.evidenceLinks || []).map((link: any, linkIndex: number) => (
+                        <div key={linkIndex} className="flex space-x-2">
+                          <input
+                            type="url"
+                            value={link.url || ''}
+                            onChange={(e) => {
+                              const newLinks = [...editData.evidenceLinks];
+                              newLinks[linkIndex] = {...newLinks[linkIndex], url: e.target.value};
+                              handleInputChange('evidenceLinks', newLinks);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            placeholder="URL"
+                          />
+                          <button
+                            onClick={() => {
+                              const newLinks = [...editData.evidenceLinks];
+                              newLinks.splice(linkIndex, 1);
+                              handleInputChange('evidenceLinks', newLinks);
+                            }}
+                            className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const newLinks = [...(editData.evidenceLinks || []), { url: '' }];
+                          handleInputChange('evidenceLinks', newLinks);
+                        }}
+                        className="px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-sm"
                       >
-                        <LinkIcon className="w-4 h-4 mr-1" />
-                        {safe(evidenceLink.url)}
-                      </a>
-                    ))}
-                  </div>
+                        Bağlantı Ekle
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {section.data.evidenceLinks && section.data.evidenceLinks.map((evidenceLink:any, index: number) => (
+                        <a
+                          key={index}
+                          href={evidenceLink.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          <LinkIcon className="w-4 h-4 mr-1" />
+                          {safe(evidenceLink.url)}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
