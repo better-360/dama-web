@@ -80,7 +80,7 @@ export const getAppointments = async () => {
 
 export const updateApplication = async (applicatorId: string, sectionType: 'preApplicationData' | 'applicationData', sectionIndex: number, sectionData: any) => {
   const response = await adminInstance.patch(
-    `admin/application/${applicatorId}/update-section`,
+    `admin/${applicatorId}/update-section`,
     {
       sectionType,
       sectionIndex,
