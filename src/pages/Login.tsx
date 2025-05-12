@@ -10,7 +10,6 @@ import LanguageSeletPage from "./Language";
 import { useDispatch } from "react-redux";
 import { loginApplicator } from "../store/slices/applicatorSlice";
 import { useNavigate } from "react-router-dom";
-import instance from "../http/instance";
 
 export default function Login() {
   const [lang, setLang] = useState<string | null>();
@@ -87,24 +86,33 @@ export default function Login() {
   
     try {
       const res = await verifyOTPToken(phoneNumber, otp.join(""));
+      console.log("OTP Response:", res); // Debug için
+      
       dispatch(loginApplicator(res));
       saveUserTokens(res.tokens);
   
       const { status, application } = res.applicator;
   
       if (status === "APPLICATOR") {
-        navigate(application.preApplicationCompleted ? "/status" : "/forms/pre-application", { replace: true });
+        if (!application) {
+          navigate("/forms/pre-application", { replace: true });
+        } else {
+          navigate(application.preApplicationCompleted ? "/status" : "/forms/pre-application", { replace: true });
+        }
       } else if (status === "CLIENT") {
-        navigate(application.applicationCompleted ? "/status" : "/forms/application-form", { replace: true });
+        if (!application) {
+          navigate("/forms/application-form", { replace: true });
+        } else {
+          navigate(application.applicationCompleted ? "/status" : "/forms/application-form", { replace: true });
+        }
       } else if (status === "APPOINTMENT_SCHEDULED") {
         navigate("/status", { replace: true });
       } else {
         toast.error("Invalid User or Status Type");
       }
-  
-      console.log(res);
     } catch (error: any) {
-      toast.error("Invalid OTP");
+      console.error("OTP Verification Error:", error);
+      toast.error("OTP Verification Error: " + (error.message || "Invalid OTP"));
     }
   };
   
