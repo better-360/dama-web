@@ -8,6 +8,7 @@ import { getApplication, getFileUrl, setAsClient, updateApplicationStatus, updat
 import { useNavigate } from 'react-router-dom';
 import { ApplicationStatus } from '../../../../types/status';
 import toast from 'react-hot-toast';
+import AdminFileUploadComponent from './UploadComponent';
 
 interface ApplicationDetailPageProps {
   id: string;
@@ -24,6 +25,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
   const [editMode, setEditMode] = useState(false);
   const [editingSection, setEditingSection] = useState<{ index: number } | null>(null);
   const [editData, setEditData] = useState<any>(null);
+  const [tempFiles, setTempFiles] = useState<File[]>([]);
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
   const navigate=useNavigate();
   useEffect(() => {
@@ -51,19 +54,110 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
     setEditingSection({ index });
     setEditData({ ...data });
     setEditMode(true);
+    setTempFiles([]); // Reset files when starting to edit
+    setFileUploadError(null);
   };
 
   const cancelEditing = () => {
     setEditingSection(null);
     setEditData(null);
     setEditMode(false);
+    setTempFiles([]);
+    setFileUploadError(null);
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setEditData(prev => ({
+    setEditData((prev:any) => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const getFileFieldName = (sectionType: string): string => {
+    switch (sectionType) {
+      case 'passport':
+        return 'passportFiles';
+      case 'employment':
+        return 'employmentFiles';
+      case 'recognition':
+        return 'files';
+      case 'payment':
+        return 'paymentFiles';
+      case 'incident':
+        return 'incidentFiles';
+      default:
+        return 'files';
+    }
+  };
+
+  const getFolderName = (sectionType: string): string => {
+    switch (sectionType) {
+      case 'passport':
+        return 'passport-documents';
+      case 'employment':
+        return 'employment-documents';
+      case 'recognition':
+        return 'recognition-documents';
+      case 'payment':
+        return 'payment-documents';
+      case 'incident':
+        return 'incident-documents';
+      default:
+        return 'documents';
+    }
+  };
+
+  const getSectionLabel = (sectionType: string): string => {
+    switch (sectionType) {
+      case 'passport':
+        return 'Pasaport Belgeleri';
+      case 'employment':
+        return 'İstihdam Belgeleri';
+      case 'recognition':
+        return 'Takdir Belgeleri';
+      case 'payment':
+        return 'Ödeme Belgeleri';
+      case 'incident':
+        return 'Olay Belgeleri';
+      default:
+        return 'Belgeler';
+    }
+  };
+
+  const handleUploadComplete = async (fileKeys: string[], sectionType: string) => {
+    const fileField = getFileFieldName(sectionType);
+    
+    // Mevcut dosyalara yeni dosyaları ekle
+    setEditData((prev: any) => {
+      const currentFiles = prev[fileField] || [];
+      return {
+        ...prev,
+        [fileField]: [...currentFiles, ...fileKeys]
+      };
+    });
+    
+    console.log(`Dosyalar yüklendi, ${fileField} alanına eklendi:`, fileKeys);
+    
+    // Kullanıcıya bilgi ver ve Kaydet düğmesine basmasını hatırlat
+    toast.success(
+      `${fileKeys.length} adet dosya başarıyla yüklendi. Değişiklikleri kaydetmek için lütfen Kaydet düğmesine basın.`,
+      { duration: 5000 }
+    );
+  };
+
+  const handleRemoveFile = (fileIndex: number, sectionType: string) => {
+    const fileField = getFileFieldName(sectionType);
+    
+    setEditData((prev: any) => {
+      const currentFiles = [...(prev[fileField] || [])];
+      currentFiles.splice(fileIndex, 1);
+      return {
+        ...prev,
+        [fileField]: currentFiles
+      };
+    });
+    
+    toast.success('Dosya kaldırıldı');
   };
 
   const saveChanges = async () => {
@@ -71,6 +165,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
 
     try {
       setLoading(true);
+      console.log('Saving data:', editData);
+      
       await updateApplication(application.applicatorId, 'preApplicationData', editingSection.index, editData);
       
       // Update local state
@@ -82,6 +178,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
           ...updatedData[editingSection.index],
           data: editData
         };
+        
+        console.log('Updated application data:', updatedData[editingSection.index]);
         
         return {
           ...prev,
@@ -177,6 +275,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
         return section.data.files;
       case 'payment':
         return section.data.paymentFiles;
+      case 'incident':
+        return section.data.incidentFiles;
       default:
         return undefined;
     }
@@ -191,6 +291,7 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
       console.error('Error in getFileLink:', error);
     }
   };
+
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
       return (
@@ -213,6 +314,88 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
         ))}
       </div>
     );
+  };
+
+  const renderEditableFiles = (section: any, sectionIndex: number) => {
+    const sectionType = section.section;
+    const fileField = getFileFieldName(sectionType);
+    const folderName = getFolderName(sectionType);
+    const sectionLabel = getSectionLabel(sectionType);
+    
+    if (editMode && editingSection?.index === sectionIndex) {
+      // Edit modundayız, AdminFileUploadComponent'i göster ve mevcut dosyaları da listele
+      return (
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-500 mb-3">{sectionLabel}</label>
+          
+          {/* Mevcut yüklenmiş dosyaları göster */}
+          {editData && editData[fileField] && editData[fileField].length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Yüklü Belgeler:</p>
+              <div className="space-y-2">
+                {editData[fileField].map((fileKey: string, idx: number) => (
+                  <div 
+                    key={idx} 
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center">
+                      <FileText className="w-5 h-5 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700 truncate max-w-xs">
+                        {fileKey.split('/').pop() || `Belge ${idx + 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => getFileLink(fileKey)}
+                        className="p-1 rounded-full text-blue-600 hover:bg-blue-50"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(idx, sectionType)}
+                        className="p-1 rounded-full text-red-600 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Yeni dosya yükleme komponenti */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">Yeni Belge Ekle:</p>
+            <AdminFileUploadComponent
+              files={tempFiles}
+              setFiles={setTempFiles}
+              setError={setFileUploadError}
+              applicationNumber={application?.applicationNumber || ''}
+              folder={folderName}
+              onUploadComplete={(fileKeys) => handleUploadComplete(fileKeys, sectionType)}
+              label={sectionLabel}
+              maxSize={10} // 10MB limit
+            />
+            {fileUploadError && (
+              <p className="text-sm text-red-600 mt-2">{fileUploadError}</p>
+            )}
+            
+            {/* Kullanıcıya hatırlatma */}
+            {tempFiles.length > 0 && (
+              <div className="bg-blue-50 text-blue-700 p-3 rounded-md mt-3 text-sm">
+                Dosyaları yükledikten sonra, değişiklikleri kaydetmek için sayfanın üstündeki <b>Kaydet</b> düğmesine basmayı unutmayın.
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    } else {
+      // Normal görüntüleme modundayız, mevcut dosyaları göster
+      return renderFiles(getFilesForSection(section));
+    }
   };
 
   const getUserFullName = () => {
@@ -303,18 +486,20 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
                   {sectionLabels[section.section]}
                 </h4>
                 {editMode && editingSection?.index === sectionIndex ? (
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <button
                       onClick={saveChanges}
-                      className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                      className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center space-x-2"
                     >
                       <Save className="w-4 h-4" />
+                      <span>Kaydet</span>
                     </button>
                     <button
                       onClick={cancelEditing}
-                      className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                      className="px-3 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors flex items-center space-x-2"
                     >
                       <X className="w-4 h-4" />
+                      <span>İptal</span>
                     </button>
                   </div>
                 ) : (
@@ -385,11 +570,18 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
                       {section.data.incidentDescription}
                     </p>
                   )}
+                  
+                  {/* Dosya render işlemi için ortak fonksiyonu kullan */}
+                  {renderEditableFiles(section, sectionIndex)}
                 </div>
               )}
 
-              {['passport', 'employment', 'recognition', 'payment'].includes(section.section) && 
-                renderFiles(getFilesForSection(section))}
+              {/* Tüm dosya bölümleri için ortak yaklaşım */}
+              {['passport', 'employment', 'recognition', 'payment'].includes(section.section) && (
+                <div>
+                  {renderEditableFiles(section, sectionIndex)}
+                </div>
+              )}
             </div>
           ))}
         </div>

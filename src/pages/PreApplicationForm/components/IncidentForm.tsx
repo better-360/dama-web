@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, HelpCircle, ChevronRight } from "lucide-react";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
+import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 
 interface IncidentFormProps {
   onBack: () => void;
@@ -11,6 +12,8 @@ interface IncidentFormProps {
 const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
   const { t } = useTranslation();
   const [description, setDescription] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [showTips, setShowTips] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,6 +30,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
       section: "incident",
       data: {
         incidentDescription: description,
+         incidentFiles:null,
       },
     };
     await updatePreApplicationSection(data);
@@ -98,6 +102,26 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
               <span>{description.length} / 100</span>
             </div>
           </div>
+
+          <MultiFileUploadComponent
+            files={files}
+            setFiles={setFiles}
+            setError={setError}
+            label="Incident Files"
+            allowedTypes={[
+              "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.ms-excel",
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-powerpoint",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.ms-access",
+              "image/jpeg",
+              "image/png",
+              "image/jpg",
+            ]}
+          />
 
           <button
             type="submit"

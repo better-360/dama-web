@@ -27,7 +27,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
     "image/jpeg",
     "image/png",
   ],
-  maxSize = 5, // Default 5MB
+  maxSize = 105, // Default 5MB
 }) => {
   const { t } = useTranslation();
   const [dragActive, setDragActive] = useState(false);

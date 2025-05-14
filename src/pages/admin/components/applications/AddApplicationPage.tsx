@@ -94,12 +94,14 @@ export default function AddApplicationPage({
   const [employmentFiles, setEmploymentFiles] = useState<File[]>([]);
   const [recognitionFiles, setRecognitionFiles] = useState<File[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
+  const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
 
   // Error management per section
   const [passportError, setPassportError] = useState<string | null>(null);
   const [employmentError, setEmploymentError] = useState<string | null>(null);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [incidentError, setIncidentError] = useState<string | null>(null);
 
   const navigate=useNavigate();
   const minDateString = new Date(
@@ -131,6 +133,7 @@ export default function AddApplicationPage({
       section: "incident",
       data: {
         incidentDescription: "",
+        incidentFiles: [],
       },
     },
     {
@@ -200,6 +203,14 @@ export default function AddApplicationPage({
     const updatedFiles = [...currentFiles, ...fileKeys];
     console.log("Updated passport files:", updatedFiles);
     updateSectionField("passport", "employmentFiles", updatedFiles);
+  };
+
+  const handleIncidentFileUpload = (fileKeys: string[]) => {
+    console.log("Incident file keys received:", fileKeys);
+    const currentFiles = getSectionData("incident")?.incidentFiles || [];
+    const updatedFiles = [...currentFiles, ...fileKeys];
+    console.log("Updated incident files:", updatedFiles);
+    updateSectionField("incident", "incidentFiles", updatedFiles);
   };
 
   const handleEmploymentFileUpload = (fileKeys: string[]) => {
@@ -745,6 +756,32 @@ export default function AddApplicationPage({
                 En az 50 karakter giriniz.
               </p>
             </div>
+
+            <h4 className="text-md font-medium text-gray-900">
+              Olay Mektubu
+            </h4>
+            {renderInfoBox(
+              "Olay Mektubu Hakkında",
+              "Olay mektubu, üslerde yaşanan olayların detaylı bir şekilde açıklandığı belge. Olayların tarihleri, yerleri ve detayları önemlidir."
+            )}
+            <AdminFileUploadComponent
+              files={incidentFiles}
+              setFiles={setIncidentFiles}
+              setError={setIncidentError}
+              applicationNumber={applicationNumber}
+              fileUrls={incidentData.documentLink}
+              folder="incident"
+              label="Olay Belgesi"
+              onUploadComplete={handleIncidentFileUpload}
+              allowedTypes={[
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "image/jpeg",
+                "image/png",
+                "image/jpg",
+              ]}
+            />
           </div>
         );
       case 3:

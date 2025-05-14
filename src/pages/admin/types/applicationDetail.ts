@@ -2,6 +2,7 @@ export interface PreApplicationData {
   step: number;
   section: string;
   data: {
+    incidentFiles(incidentFiles: any): import("react").ReactNode | Iterable<import("react").ReactNode>;
     email?: string;
     lastName?: string;
     firstName?: string;

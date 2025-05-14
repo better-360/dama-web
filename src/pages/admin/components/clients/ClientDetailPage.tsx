@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, FileText, Download, Link as LinkIcon, Edit, Save, X } from "lucide-react";
+import { ArrowLeft, FileText, Download, Link as LinkIcon, Edit, Save, X, Upload } from "lucide-react";
 import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
 import { sectionLabels as applicationSectionLabels } from "../../types/clientDetail";
 import { getApplication, getFileUrl, updateApplicationStatus, updateApplication } from "../../../../http/requests/admin";
 import { ApplicationStatus } from "../../../../types/status";
 import toast from "react-hot-toast";
+import AdminFileUploadComponent from "../applications/UploadComponent";
 
 interface ClientDetailPageProps {
   id: string;
@@ -25,6 +26,8 @@ export default function ClientDetailPage({
   const [editMode, setEditMode] = useState(false);
   const [editingSection, setEditingSection] = useState<{ type: 'preApplicationData' | 'applicationData', index: number } | null>(null);
   const [editData, setEditData] = useState<any>(null);
+  const [tempFiles, setTempFiles] = useState<File[]>([]);
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"pre-application" | "application">(
     "pre-application"
@@ -52,12 +55,16 @@ export default function ClientDetailPage({
     setEditingSection({ type, index });
     setEditData({ ...data });
     setEditMode(true);
+    setTempFiles([]);
+    setFileUploadError(null);
   };
 
   const cancelEditing = () => {
     setEditingSection(null);
     setEditData(null);
     setEditMode(false);
+    setTempFiles([]);
+    setFileUploadError(null);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -77,14 +84,106 @@ export default function ClientDetailPage({
     }));
   };
 
+  const handleUploadComplete = async (fileKeys: string[], sectionType: string) => {
+    const fileField = getFileFieldName(sectionType);
+    
+    setEditData((prev: any) => {
+      const currentFiles = prev[fileField] || [];
+      return {
+        ...prev,
+        [fileField]: [...currentFiles, ...fileKeys]
+      };
+    });
+    
+    console.log(`Dosyalar yüklendi, ${fileField} alanına eklendi:`, fileKeys);
+    
+    toast.success(
+      `${fileKeys.length} adet dosya başarıyla yüklendi. Değişiklikleri kaydetmek için lütfen Kaydet düğmesine basın.`,
+      { duration: 5000 }
+    );
+  };
+
+  const handleRemoveFile = (fileIndex: number, sectionType: string) => {
+    const fileField = getFileFieldName(sectionType);
+    
+    setEditData((prev: any) => {
+      const currentFiles = [...(prev[fileField] || [])];
+      currentFiles.splice(fileIndex, 1);
+      return {
+        ...prev,
+        [fileField]: currentFiles
+      };
+    });
+    
+    toast.success('Dosya kaldırıldı');
+  };
+
+  const getFileFieldName = (sectionType: string): string => {
+    switch (sectionType) {
+      case "passport":
+        return "passportFiles";
+      case "workConditions":
+        return "loaFile";
+      case "employment":
+        return "employmentFiles";
+      case "recognition":
+        return "files";
+      case "payment":
+        return "paymentFiles";
+      case "incident":
+        return "incidentFiles";
+      default:
+        return "files";
+    }
+  };
+
+  const getFolderName = (sectionType: string): string => {
+    switch (sectionType) {
+      case "passport":
+        return "passport-documents";
+      case "workConditions":
+        return "workConditions-documents";
+      case "employment":
+        return "employment-documents";
+      case "recognition":
+        return "recognition-documents";
+      case "payment":
+        return "payment-documents";
+      case "incident":
+        return "incident-documents";
+      default:
+        return "documents";
+    }
+  };
+
+  const getSectionLabel = (sectionType: string): string => {
+    switch (sectionType) {
+      case "passport":
+        return "Pasaport Belgeleri";
+      case "workConditions":
+        return "Çalışma Koşulları Belgeleri";
+      case "employment":
+        return "İstihdam Belgeleri";
+      case "recognition":
+        return "Takdir Belgeleri";
+      case "payment":
+        return "Ödeme Belgeleri";
+      case "incident":
+        return "Olay Belgeleri";
+      default:
+        return "Belgeler";
+    }
+  };
+
   const saveChanges = async () => {
     if (!editingSection || !application) return;
 
     try {
       setLoading(true);
+      console.log('Saving data:', editData);
+      
       await updateApplication(application.applicatorId, editingSection.type, editingSection.index, editData);
       
-      // Update local state
       setApplication(prev => {
         if (!prev) return null;
         
@@ -93,6 +192,8 @@ export default function ClientDetailPage({
           ...updatedData[editingSection.index],
           data: editData
         };
+        
+        console.log('Updated application data:', updatedData[editingSection.index]);
         
         return {
           ...prev,
@@ -114,6 +215,8 @@ export default function ClientDetailPage({
     if (!section || !section.data) return undefined;
 
     switch (section.section) {
+      case "incident":
+        return section.data.incidentFiles;
       case "passport":
         return section.data.passportFiles;
       case "workConditions":
@@ -128,7 +231,6 @@ export default function ClientDetailPage({
         return undefined;
     }
   };
-
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as ApplicationStatus
@@ -164,6 +266,84 @@ export default function ClientDetailPage({
       console.error('Error in getFileLink:', error);
     }
   };
+
+  const renderEditableFiles = (section: any, sectionIndex: number, dataType: 'preApplicationData' | 'applicationData') => {
+    const sectionType = section.section;
+    const fileField = getFileFieldName(sectionType);
+    const folderName = getFolderName(sectionType);
+    const sectionLabel = getSectionLabel(sectionType);
+    
+    if (editMode && editingSection?.type === dataType && editingSection.index === sectionIndex) {
+      return (
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-500 mb-3">{sectionLabel}</label>
+          
+          {editData && editData[fileField] && editData[fileField].length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Yüklü Belgeler:</p>
+              <div className="space-y-2">
+                {editData[fileField].map((fileKey: string, idx: number) => (
+                  <div 
+                    key={idx} 
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center">
+                      <FileText className="w-5 h-5 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700 truncate max-w-xs">
+                        {fileKey.split('/').pop() || `Belge ${idx + 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => getFileLink(fileKey)}
+                        className="p-1 rounded-full text-blue-600 hover:bg-blue-50"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(idx, sectionType)}
+                        className="p-1 rounded-full text-red-600 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">Yeni Belge Ekle:</p>
+            <AdminFileUploadComponent
+              files={tempFiles}
+              setFiles={setTempFiles}
+              setError={setFileUploadError}
+              applicationNumber={application?.applicationNumber || ''}
+              folder={folderName}
+              onUploadComplete={(fileKeys) => handleUploadComplete(fileKeys, sectionType)}
+              label={sectionLabel}
+              maxSize={10}
+            />
+            {fileUploadError && (
+              <p className="text-sm text-red-600 mt-2">{fileUploadError}</p>
+            )}
+            
+            {tempFiles.length > 0 && (
+              <div className="bg-blue-50 text-blue-700 p-3 rounded-md mt-3 text-sm">
+                Dosyaları yükledikten sonra, değişiklikleri kaydetmek için <b>Kaydet</b> düğmesine basmayı unutmayın.
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    } else {
+      return renderFiles(getFilesForSection(section));
+    }
+  };
+
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
       return <p className="text-sm text-gray-500 italic">Dosya yüklenmemiş</p>;
@@ -179,7 +359,7 @@ export default function ClientDetailPage({
           >
             <FileText className="w-5 h-5 text-gray-500 mr-2" />
             <span className="text-sm text-gray-700 truncate">
-              Dosya {index + 1}
+              {file.split('/').pop()}
             </span>
             <Download className="w-4 h-4 text-gray-500 ml-auto" />
           </p>
@@ -200,18 +380,20 @@ export default function ClientDetailPage({
                 {preApplicationSectionLabels[section.section]}
               </h4>
               {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <button
                     onClick={saveChanges}
-                    className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                    className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center space-x-2"
                   >
                     <Save className="w-4 h-4" />
+                    <span>Kaydet</span>
                   </button>
                   <button
                     onClick={cancelEditing}
-                    className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                    className="px-3 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors flex items-center space-x-2"
                   >
                     <X className="w-4 h-4" />
+                    <span>İptal</span>
                   </button>
                 </div>
               ) : (
@@ -290,17 +472,22 @@ export default function ClientDetailPage({
                     {section.data.incidentDescription}
                   </p>
                 )}
+                
+                {renderEditableFiles(section, sectionIndex, 'preApplicationData')}
               </div>
             )}
 
-            {["passport", "employment", "recognition", "payment"].includes(
-              section.section
-            ) && renderFiles(getFilesForSection(section))}
+            {["passport", "employment", "recognition", "payment"].includes(section.section) && (
+              <div>
+                {renderEditableFiles(section, sectionIndex, 'preApplicationData')}
+              </div>
+            )}
           </div>
         ))}
       </div>
     );
   };
+  
   const safe = (value: any) =>
     value === null || value === undefined || value === ""
       ? "Belirtilmemiş"
@@ -318,18 +505,20 @@ export default function ClientDetailPage({
                 {applicationSectionLabels[section.section]}
               </h4>
               {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <button
                     onClick={saveChanges}
-                    className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                    className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center space-x-2"
                   >
                     <Save className="w-4 h-4" />
+                    <span>Kaydet</span>
                   </button>
                   <button
                     onClick={cancelEditing}
-                    className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                    className="px-3 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors flex items-center space-x-2"
                   >
                     <X className="w-4 h-4" />
+                    <span>İptal</span>
                   </button>
                 </div>
               ) : (
@@ -382,7 +571,6 @@ export default function ClientDetailPage({
                     </p>
                   )}
                 </div>
-                {/* Çocuk bilgileri */}
                 {(section.data.hasChildren || (editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex && editData.hasChildren)) && (
                   <div>
                     <div className="flex items-center mb-2">
@@ -461,166 +649,171 @@ export default function ClientDetailPage({
             )}
   
             {section.section === "employment" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    İşveren
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="text"
-                      value={editData.employerName || ''}
-                      onChange={(e) => handleInputChange('employerName', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.employerName)}
-                    </p>
-                  )}
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      İşveren
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.employerName || ''}
+                        onChange={(e) => handleInputChange('employerName', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.employerName)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Pozisyon
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.position || ''}
+                        onChange={(e) => handleInputChange('position', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.position)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Maaş
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.salary || ''}
+                        onChange={(e) => handleInputChange('salary', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.salary)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Başlangıç Tarihi
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="date"
+                        value={editData.startDate || ''}
+                        onChange={(e) => handleInputChange('startDate', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.startDate)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Pozisyon
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="text"
-                      value={editData.position || ''}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.position)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Maaş
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="text"
-                      value={editData.salary || ''}
-                      onChange={(e) => handleInputChange('salary', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.salary)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Başlangıç Tarihi
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="date"
-                      value={editData.startDate || ''}
-                      onChange={(e) => handleInputChange('startDate', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.startDate)}
-                    </p>
-                  )}
-                </div>
-                {/* Sözleşme dosyası */}
+                {renderEditableFiles(section, sectionIndex, 'applicationData')}
               </div>
             )}
   
             {section.section === "workConditions" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Üsler
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="text"
-                      value={editData.bases || ''}
-                      onChange={(e) => handleInputChange('bases', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.bases)}
-                    </p>
-                  )}
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Üsler
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.bases || ''}
+                        onChange={(e) => handleInputChange('bases', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.bases)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Günlük Çalışma Saati
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="number"
+                        value={editData.dailyHours || ''}
+                        onChange={(e) => handleInputChange('dailyHours', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.dailyHours)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Haftalık Çalışma Günü
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="number"
+                        value={editData.weeklyDays || ''}
+                        onChange={(e) => handleInputChange('weeklyDays', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.weeklyDays)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Son Çalışma Tarihi
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="date"
+                        value={editData.lastWorkDate || ''}
+                        onChange={(e) => handleInputChange('lastWorkDate', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.lastWorkDate)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Yönetici
+                    </label>
+                    {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
+                      <input
+                        type="text"
+                        value={editData.supervisorName || ''}
+                        onChange={(e) => handleInputChange('supervisorName', e.target.value)}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safe(section.data.supervisorName)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Günlük Çalışma Saati
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="number"
-                      value={editData.dailyHours || ''}
-                      onChange={(e) => handleInputChange('dailyHours', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.dailyHours)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Haftalık Çalışma Günü
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="number"
-                      value={editData.weeklyDays || ''}
-                      onChange={(e) => handleInputChange('weeklyDays', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.weeklyDays)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Son Çalışma Tarihi
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="date"
-                      value={editData.lastWorkDate || ''}
-                      onChange={(e) => handleInputChange('lastWorkDate', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.lastWorkDate)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Yönetici
-                  </label>
-                  {editMode && editingSection?.type === 'applicationData' && editingSection.index === sectionIndex ? (
-                    <input
-                      type="text"
-                      value={editData.supervisorName || ''}
-                      onChange={(e) => handleInputChange('supervisorName', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {safe(section.data.supervisorName)}
-                    </p>
-                  )}
-                </div>
+                {renderEditableFiles(section, sectionIndex, 'applicationData')}
               </div>
             )}
   
@@ -926,26 +1119,22 @@ export default function ClientDetailPage({
         </div>
         <div className="">
           <p className="text-sm text-gray-500">Update Status</p>
-          {/* ——— Status Dropdown ——— */}
-      <select
-        value={selectedStatus}
-        onChange={handleStatusChange}
-        className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-sm"
-      >
-        <option value="" disabled>
-       Select a Status
-        </option>
-        {Object.values(ApplicationStatus).map((status) => (
-          <option key={status} value={status}>
-            {status.split('_').join(' ')}  {/* alt çizgileri boşlukla değiştirir */}
-          </option>
-        ))}
-      </select>
-
+          <select
+            value={selectedStatus}
+            onChange={handleStatusChange}
+            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-sm"
+          >
+            <option value="" disabled>
+              Select a Status
+            </option>
+            {Object.values(ApplicationStatus).map((status) => (
+              <option key={status} value={status}>
+                {status.split('_').join(' ')}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-
-          
 
       <div className="bg-white rounded-lg shadow-sm">
         <div className="border-b border-gray-200">
