@@ -84,17 +84,11 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({
   };
 
   const isFormValid = () => {
-    if (formData.hasWitnesses === null) return false;
-    if (formData.hasWitnesses && formData.witnesses.length === 0) return false;
-    if (formData.hasWitnesses && formData.witnesses.some(witness => !witness.firstName || !witness.lastName)) return false;
-    if (formData.evidenceLinks.length > 0 && formData.evidenceLinks.some(link => !link.url)) return false;
-    return true;
+    return true; // No validation required
   };
 
   const handleContinue = () => {
-    if (isFormValid()) {
-      onComplete();
-    }
+    onComplete();
   };
 
   return (

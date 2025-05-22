@@ -83,7 +83,7 @@ type FormStep =
 export default function ApplicationForm() {
   const [currentStep, setCurrentStep] = useState<FormStep>("requirements");
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); 
 
   // Initialize form data with empty values
   const [formData, setFormData] = useState<ApplicationData>({

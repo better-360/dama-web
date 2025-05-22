@@ -64,21 +64,11 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
   };
 
   const isFormValid = () => {
-    if (formData.hasWorked === null) return false;
-    if (formData.hasWorked) {
-      if (formData.previousJobs.length === 0) return false;
-      if (formData.previousJobs.some(job => !job.companyName || !job.startDate || !job.endDate)) return false;
-      if (formData.isCurrentlyWorking === null) return false;
-      if (formData.isCurrentlyWorking && (!formData.currentCompany || !formData.currentSalary)) return false;
-      if (!formData.isCurrentlyWorking && !formData.lastSalary) return false;
-    }
-    return true;
+    return true; // No validation required
   };
 
   const handleContinue = () => {
-    if (isFormValid()) {
-      onComplete();
-    }
+    onComplete();
   };
 
   return (

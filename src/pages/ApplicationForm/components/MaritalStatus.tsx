@@ -60,30 +60,11 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
   };
 
   const handleContinue = () => {
-    if (
-      formData.maritalStatus === 'single' ||
-      (formData.maritalStatus === 'married' && formData.spouseName)
-    ) {
-      if (
-        formData.hasChildren === false ||
-        (formData.hasChildren === true && formData.children.length > 0)
-      ) {
-        onComplete();
-      }
-    }
+    onComplete();
   };
   
   const isFormValid = () => {
-    if (!formData.maritalStatus) return false;
-    if (formData.maritalStatus === 'married' && !formData.spouseName) return false;
-    if (formData.hasChildren === null) return false;
-    if (formData.hasChildren && formData.children.length === 0) return false;
-    if (
-      formData.hasChildren &&
-      formData.children.some((child) => !child.name || !child.birthDate)
-    )
-      return false;
-    return true;
+    return true; // No validation required
   };
 
   return (

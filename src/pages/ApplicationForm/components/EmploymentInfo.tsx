@@ -93,23 +93,10 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
   };
 
   const isFormValid = () => {
-    return (
-      localFormData.employerName &&
-      localFormData.position &&
-      localFormData.startDate &&
-      localFormData.salary &&
-      localFormData.isContractor !== null &&
-      localFormData.isMultiplePayments !== null &&
-      localFormData.totalCompensation &&
-      localFormData.hasContract !== null
-    );
+    return true; // No validation required
   };
 
   const handleContinue = async () => {
-    if (!isFormValid()) {
-      return;
-    }
-    
     setSaving(true);
     let finalFormData = {...localFormData};
     

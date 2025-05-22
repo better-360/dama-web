@@ -81,20 +81,10 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
   };
 
   const isFormValid = () => {
-    return (
-      localFormData.bases &&
-      localFormData.dailyHours &&
-      localFormData.weeklyDays &&
-      localFormData.lastWorkDate &&
-      localFormData.supervisorName
-    );
+    return true; // No validation required
   };
 
   const handleContinue = async () => {
-    if (!isFormValid()) {
-      return;
-    }
-    
     setSaving(true);
     let finalFormData = {...localFormData};
     
