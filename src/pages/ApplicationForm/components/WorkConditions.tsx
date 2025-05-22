@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { uploadFileToS3 } from '../../../utils/firebase';
 import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
+import DatePicker from "react-datepicker";
 
 interface WorkConditionsData {
   dailyHours: string;
@@ -81,40 +82,43 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
 
   const isFormValid = () => {
     return (
+      localFormData.bases &&
       localFormData.dailyHours &&
       localFormData.weeklyDays &&
       localFormData.lastWorkDate &&
-      localFormData.supervisorName &&
-      localFormData.bases
+      localFormData.supervisorName
     );
   };
 
   const handleContinue = async () => {
-    if (isFormValid()) {
-      setSaving(true);
-      
-      try {
-        let finalFormData = {...localFormData};
+    if (!isFormValid()) {
+      return;
+    }
+    
+    setSaving(true);
+    let finalFormData = {...localFormData};
+    
+    try {
+      // Upload files if needed
+      if (files.length > 0) {
+        const uploadedUrls = await handleUploadAll();
+        console.log("Uploaded URLs:", uploadedUrls);
         
-        // Only upload if there are new files
-        if (files.length > 0) {
-          const uploadedUrls = await handleUploadAll();
-          if (uploadedUrls.length > 0) {
-            finalFormData.loaFile = uploadedUrls[0];
-            // Also update parent form data
-            updateFormData({ loaFile: uploadedUrls[0] });
-          }
+        if (uploadedUrls.length > 0) {
+          // Update local state
+          finalFormData.loaFile = uploadedUrls[0];
+          // Also update parent form data
+          updateFormData({ loaFile: uploadedUrls[0] });
         }
-        
-        // Pass the complete form data with file URL to parent
-        onComplete(finalFormData);
-        
-      } catch (error) {
-        console.error("Error during save:", error);
-        setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
-      } finally {
-        setSaving(false);
       }
+      
+      // Pass the complete form data with file URL to parent
+      onComplete(finalFormData);
+    } catch (error) {
+      console.error("Error during save:", error);
+      setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -177,12 +181,18 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               {t('workConditions.lastWorkDate')}
             </h2>
             
-            <input
-              type="date"
-              name="lastWorkDate"
-              value={localFormData.lastWorkDate}
-              onChange={handleInputChange}
+            <DatePicker
+              selected={localFormData.lastWorkDate ? new Date(localFormData.lastWorkDate) : null}
+              onChange={(date) => {
+                const formattedDate = date ? date.toISOString().split('T')[0] : '';
+                handleInputChange({
+                  target: { name: 'lastWorkDate', value: formattedDate }
+                } as React.ChangeEvent<HTMLInputElement>);
+              }}
+              dateFormat="yyyy-MM-dd"
               className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
+              placeholderText={t("workConditions.lastWorkDatePlaceholder")}
+              maxDate={new Date()}
             />
           </div>
 

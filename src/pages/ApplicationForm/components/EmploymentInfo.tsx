@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, Briefcase, Loader } from "lucide-react";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { uploadFileToS3 } from "../../../utils/firebase";
+import DatePicker from "react-datepicker";
 
 interface EmploymentData {
   employerName: string;
@@ -100,8 +101,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
       localFormData.isContractor !== null &&
       localFormData.isMultiplePayments !== null &&
       localFormData.totalCompensation &&
-      localFormData.hasContract !== null &&
-      (localFormData.hasContract === false || (localFormData.hasContract === true && (localFormData.contractFile || files.length > 0)))
+      localFormData.hasContract !== null
     );
   };
 
@@ -115,7 +115,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
     
     try {
       // Upload files if needed
-      if (files.length > 0 && localFormData.hasContract) {
+      if (files.length > 0) {
         const uploadedUrls = await handleUploadAll();
         console.log("Uploaded URLs:", uploadedUrls);
         
@@ -193,12 +193,18 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
 
-              <input
-                type="date"
-                name="startDate"
-                value={localFormData.startDate}
-                onChange={handleLocalInputChange}
+              <DatePicker
+                selected={localFormData.startDate ? new Date(localFormData.startDate) : null}
+                onChange={(date) => {
+                  const formattedDate = date ? date.toISOString().split('T')[0] : '';
+                  handleLocalInputChange({
+                    target: { name: 'startDate', value: formattedDate }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                dateFormat="yyyy-MM-dd"
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
+                placeholderText={t("employment.startDate")}
+                maxDate={new Date()}
               />
 
               <div className="relative">

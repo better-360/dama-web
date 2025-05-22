@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import {
   ArrowLeft,
   Info,
@@ -14,6 +14,11 @@ import toast from "react-hot-toast";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useNavigate } from "react-router-dom";
+//@ts-ignore
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import tr from 'date-fns/locale/tr';
+import InputMask from 'react-input-mask';
 
 // SectionData type definition - matches the API format directly
 interface SectionData {
@@ -66,6 +71,27 @@ interface AddApplicationPageProps {
   onSubmit: (applicationData: SectionData[]) => void;
 }
 
+const MaskedInput = forwardRef<HTMLInputElement, any>(({ value, onClick, onChange }, ref) => (
+  <InputMask
+    mask="99.99.9999"
+    value={value}
+    onChange={onChange}
+    className="w-full"
+  >
+    {(inputProps: any) => (
+      <input
+        {...inputProps}
+        ref={ref}
+        onClick={onClick}
+        placeholder="GG.AA.YYYY"
+        className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
+      />
+    )}
+  </InputMask>
+));
+
+MaskedInput.displayName = 'MaskedInput';
+
 export default function AddApplicationPage({
   onBack,
   onSubmit,
@@ -115,7 +141,7 @@ export default function AddApplicationPage({
     .toISOString()
     .split("T")[0];
 
-  // Main form data structure - using the exact format expected by the API
+  // Initialize form data structure - using the exact format expected by the API
   const [sectionsData, setSectionsData] = useState<SectionData[]>([
     {
       step: 1,
@@ -123,7 +149,7 @@ export default function AddApplicationPage({
       data: {
         firstName: "",
         lastName: "",
-        birthDate: new Date(),
+        birthDate: null,
         email: "",
         telephone: "",
       },
@@ -609,31 +635,33 @@ export default function AddApplicationPage({
                   disabled={applicationCreated}
                 />
               </div>
-              <div>
+              <div className="sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700">
                   Doğum Tarihi
                 </label>
-                <input
-                  type="date"
-                  id="birthDate"
-                  value={
-                    contactData.birthDate instanceof Date
-                      ? contactData.birthDate.toISOString().split("T")[0]
-                      : new Date().toISOString().split("T")[0]
-                  }
-                  onChange={(e) =>
-                    updateSectionField(
-                      "contact",
-                      "birthDate",
-                      new Date(e.target.value)
-                    )
-                  }
-                  min={minDateString}
-                  max={maxDateString}
-                  disabled={applicationCreated}
-                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
-                  required
-                />
+                <div className="w-full">
+                  <DatePicker
+                    selected={
+                      sectionsData.find(s => s.section === "contact")?.data.birthDate instanceof Date
+                        ? sectionsData.find(s => s.section === "contact")?.data.birthDate
+                        : null
+                    }
+                    onChange={(date: Date | null) => {
+                      updateSectionField("contact", "birthDate", date);
+                    }}
+                    customInput={<MaskedInput />}
+                    dateFormat="dd.MM.yyyy"
+                    locale={tr}
+                    maxDate={new Date(maxDateString)}
+                    minDate={new Date(minDateString)}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    isClearable
+                    disabled={applicationCreated}
+                    wrapperClassName="w-full"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">

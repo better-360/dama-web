@@ -24,13 +24,8 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length > 0) {
-      setSaving(true);
-      const uploadedUrls = await handleUploadAll();
-      setSaving(false);
-      await handleSaveStep6(uploadedUrls);
-      onContinue(files);
-    }
+    await handleSaveStep6();
+    onContinue(files);
   };
 
  const handleUploadAll = async (): Promise<string[]> => {
@@ -57,15 +52,15 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
    };
  
   
-  const handleSaveStep6 =async (urls: string[])  => {
+  const handleSaveStep6 = async () => {
     const data = {
       step: 6,
       section: "payment",
       data: {
-        paymentFiles: urls,
+        paymentFiles: [],
       },
     };
-      await updatePreApplicationSection(data); 
+    await updatePreApplicationSection(data);
   };
 
 
@@ -156,13 +151,7 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
 
           <button
             type="submit"
-            disabled={files.length === 0}
-            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
-              ${
-                files.length > 0
-                  ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
-              } transition-all duration-300`}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
             {t("paymentUpload.continue")}
             <ChevronRight className="w-5 h-5" />

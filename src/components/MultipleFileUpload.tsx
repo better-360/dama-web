@@ -42,6 +42,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
       setDragActive(false);
     }
   };
+
   // Handle drop event
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -58,6 +59,13 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
     handleFiles(selectedFiles);
   };
 
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} ${t('fileUpload.fileSize.b')}`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${t('fileUpload.fileSize.kb')}`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} ${t('fileUpload.fileSize.mb')}`;
+  };
+
   // Process and validate files
   const handleFiles = (newFiles: File[]) => {
     // Filter valid file types
@@ -67,7 +75,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
 
     // Check if any files were invalid
     if (validFiles.length < newFiles.length) {
-      setError && setError(t("application.stepFive.errors.invalidFileType"));
+      setError && setError(t("fileUpload.errors.invalidFileType"));
       if (validFiles.length === 0) return; // Don't proceed if no valid files
     }
 
@@ -78,7 +86,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
 
     // Check if any files were too large
     if (validSizedFiles.length < validFiles.length) {
-      setError && setError(t("application.stepFive.errors.fileTooLarge"));
+      setError && setError(t("fileUpload.errors.fileTooLarge", { size: maxSize }));
       if (validSizedFiles.length === 0) return; // Don't proceed if no valid files
     }
 
@@ -122,10 +130,13 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
           </div>
           <div>
             <p className="text-lg font-medium text-gray-700">
-              {t('common.dropFiles', { defaultValue: 'Drop files here or click to upload' })}
+              {dragActive ? t('fileUpload.dragActive') : t('fileUpload.dragAndDrop')}
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              {t('common.dragAndDrop', { defaultValue: 'Drag and drop your files, or click to select', label })}
+              {t('fileUpload.acceptedFormats', { formats: accept.replace(/\./g, ' ').toUpperCase() })}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {t('fileUpload.maxSize', { size: maxSize })}
             </p>
           </div>
         </div>
@@ -135,7 +146,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
       {(files.length > 0 || fileUrls.length > 0) && (
         <div className="space-y-3">
           <h3 className="font-medium text-gray-700">
-            {t('common.uploadedFiles', { defaultValue: 'Uploaded Files' })}
+            {t('fileUpload.uploadedFiles')}
           </h3>
           
           {/* Show files with URLs (previously uploaded) */}
@@ -177,6 +188,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
               <div className="flex items-center space-x-3">
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 <span className="text-sm text-gray-600">{file.name}</span>
+                <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
               </div>
               <button
                 type="button"

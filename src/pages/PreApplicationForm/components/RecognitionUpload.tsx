@@ -24,51 +24,44 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (hasDocuments === true && files.length > 0) {
-      setSaving(true);
-      const uploadedUrls = await handleUploadAll();
-      setSaving(false);
-      await handleSaveStep5(uploadedUrls);
-      onContinue(true, files);
-    }
+    await handleSaveStep5();
+    onContinue(hasDocuments, files);
   };
 
-  const handleSaveStep5 = async (urls: string[]) => {
+  const handleSaveStep5 = async () => {
     const data = {
       step: 5,
       section: "recognition",
       data: {
-        files: urls,
+        files: [],
         hasDocuments,
       },
     };
     await updatePreApplicationSection(data);
   };
 
-
   const handleUploadAll = async (): Promise<string[]> => {
-       const uploadedFileKeys: string[] = [];
-   
-       for (const file of files) {
-         try {
-           const { fileKey } = await uploadFileToS3(
-             file,
-             file.name,
-             file.type,
-             folder
-           );
-           // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
-           uploadedFileKeys.push(fileKey);
-         } catch (err) {
-           console.error("Error uploading file:", file.name, err);
-           setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
-         }
-       }
-       // İstersen burada da files'ı temizleyebilirsin.
-       setFiles([]);
-       return uploadedFileKeys;
-     };
+    const uploadedFileKeys: string[] = [];
 
+    for (const file of files) {
+      try {
+        const { fileKey } = await uploadFileToS3(
+          file,
+          file.name,
+          file.type,
+          folder
+        );
+        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
+        uploadedFileKeys.push(fileKey);
+      } catch (err) {
+        console.error("Error uploading file:", file.name, err);
+        setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
+      }
+    }
+    // İstersen burada da files'ı temizleyebilirsin.
+    setFiles([]);
+    return uploadedFileKeys;
+  };
 
   if (hasDocuments === null) {
     return (
@@ -182,13 +175,7 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
 
           <button
             type="submit"
-            disabled={files.length === 0}
-            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
-              ${
-                files.length > 0
-                  ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
-              } transition-all duration-300`}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
             {t("recognitionUpload.continue")}
             <ChevronRight className="w-5 h-5" />

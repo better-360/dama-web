@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Users, Plus, X } from 'lucide-react';
+import DatePicker from "react-datepicker";
 
 interface Child {
   id: string;
@@ -206,13 +207,15 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                     className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                     placeholder={t('maritalStatus.childNamePlaceholder')}
                   />
-                  <input
-                    type="date"
-                    value={child.birthDate}
-                    onChange={(e) =>
-                      updateChild(child.id, 'birthDate', e.target.value)
+                  <DatePicker
+                    selected={child.birthDate ? new Date(child.birthDate) : null}
+                    onChange={(date) =>
+                      updateChild(child.id, 'birthDate', date ? date.toISOString().split('T')[0] : '')
                     }
+                    dateFormat="yyyy-MM-dd"
                     className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
+                    placeholderText={t('maritalStatus.childBirthDatePlaceholder')}
+                    maxDate={new Date()}
                   />
                 </div>
               ))}

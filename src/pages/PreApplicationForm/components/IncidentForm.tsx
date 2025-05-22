@@ -18,7 +18,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (description.trim().length >= 100) {
+    if (description.trim().length === 0 || description.trim().length >= 10) {
       handleSaveStep2();
       onContinue(description);
     }
@@ -30,10 +30,15 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
       section: "incident",
       data: {
         incidentDescription: description,
-         incidentFiles:null,
+        incidentFiles: null,
       },
     };
     await updatePreApplicationSection(data);
+  };
+
+  const isValidDescription = (text: string) => {
+    const trimmedText = text.trim();
+    return trimmedText.length === 0 || trimmedText.length >= 10;
   };
 
   return (
@@ -93,13 +98,33 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
               id="incident"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-64 p-4 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors resize-none"
+              className={`w-full h-64 p-4 border-2 rounded-xl transition-colors resize-none ${
+                description.trim().length > 0 && !isValidDescription(description)
+                  ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  : "border-gray-200 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D]"
+              }`}
               placeholder={t("incidentForm.placeholder")}
             />
 
-            <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
-              <span>{t("incidentForm.minChars")}</span>
-              <span>{description.length} / 100</span>
+            <div className="flex justify-between items-center mt-2">
+              <span className={`text-sm ${
+                description.trim().length > 0 && !isValidDescription(description)
+                  ? "text-red-500"
+                  : "text-gray-500"
+              }`}>
+                {description.trim().length > 0
+                  ? description.trim().length < 10
+                    ? t("incidentForm.minCharsWarning")
+                    : t("incidentForm.minChars")
+                  : t("incidentForm.optional")}
+              </span>
+              <span className={`text-sm ${
+                description.trim().length > 0 && !isValidDescription(description)
+                  ? "text-red-500"
+                  : "text-gray-500"
+              }`}>
+                {description.length} {description.trim().length > 0 ? "/ 10" : ""}
+              </span>
             </div>
           </div>
 
@@ -125,10 +150,10 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
 
           <button
             type="submit"
-            disabled={description.trim().length < 100}
+            disabled={description.trim().length > 0 && !isValidDescription(description)}
             className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
               ${
-                description.trim().length >= 100
+                description.trim().length === 0 || description.trim().length >= 10
                   ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               } transition-all duration-300`}

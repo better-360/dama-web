@@ -13,6 +13,7 @@ import Summary from "./components/Summary";
 import SubmissionComplete from "./components/SubmissionComplete";
 import RequirementsPage from "./components/RequirementsPage";
 import { ApplicationType } from "../../types/form";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Define interfaces for each form section
 interface Child {

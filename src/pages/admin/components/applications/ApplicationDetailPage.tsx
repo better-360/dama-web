@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { ArrowLeft, FileText, Download, Calendar, UserPlus, Edit, Save, X } from 'lucide-react';
 import type { ApplicationDetail } from '../../types/applicationDetail';
 import { sectionLabels } from '../../types/applicationDetail';
@@ -9,11 +9,36 @@ import { useNavigate } from 'react-router-dom';
 import { ApplicationStatus } from '../../../../types/status';
 import toast from 'react-hot-toast';
 import AdminFileUploadComponent from './UploadComponent';
+//@ts-ignore
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import tr from 'date-fns/locale/tr';
+import InputMask from 'react-input-mask';
 
 interface ApplicationDetailPageProps {
   id: string;
   onBack: () => void;
 }
+
+const MaskedInput = forwardRef<HTMLInputElement, any>(({ value, onClick, onChange }, ref) => (
+  <InputMask
+    mask="99.99.9999"
+    value={value}
+    onChange={onChange}
+  >
+    {(inputProps: any) => (
+      <input
+        {...inputProps}
+        ref={ref}
+        onClick={onClick}
+        placeholder="GG.AA.YYYY"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
+      />
+    )}
+  </InputMask>
+));
+
+MaskedInput.displayName = 'MaskedInput';
 
 export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailPageProps) {
   const [application, setApplication] = useState<ApplicationDetail | null>(null);
@@ -550,6 +575,38 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
                       />
                     ) : (
                       <p className="mt-1 text-sm text-gray-900">{section.data.email}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Doğum Tarihi
+                    </label>
+                    {editMode && editingSection?.index === sectionIndex ? (
+                      <div className="mt-1 relative">
+                        <DatePicker
+                          selected={editData.birthDate ? new Date(editData.birthDate) : null}
+                          onChange={(date: Date | null) => {
+                            if (date) {
+                              const formattedDate = date.toISOString().split('T')[0];
+                              handleInputChange('birthDate', formattedDate);
+                            } else {
+                              handleInputChange('birthDate', '');
+                            }
+                          }}
+                          customInput={<MaskedInput />}
+                          dateFormat="dd.MM.yyyy"
+                          maxDate={new Date()}
+                          showMonthDropdown
+                          showYearDropdown
+                          dropdownMode="select"
+                          locale={tr}
+                          isClearable
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-900">
+                        {section.data.birthDate ? new Date(section.data.birthDate).toLocaleDateString('tr-TR') : '-'}
+                      </p>
                     )}
                   </div>
                 </div>

@@ -46,27 +46,22 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
   };
 
   // İşlemleri kaydetmek için backend'e gönderme
-  const handleSaveStep4 = async (urls: string[]) => {
+  const handleSaveStep4 = async () => {
     const data = {
       step: 4,
       section: "employment",
       data: {
-        employmentFiles: urls,
+        employmentFiles: [],
       },
     };
-    console.log("Data to be sent:", data);
+
     await updatePreApplicationSection(data);
   };
   // Form submitinde önce dosyaları S3'e yükleyip, ardından backend'e kaydediyoruz.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length > 0) {
-      setSaving(true);
-      const uploadedUrls = await handleUploadAll(); // handleUploadAll'u güncelleyelim
-      await handleSaveStep4(uploadedUrls);
-      onContinue(files);
-      setSaving(false);
-    }
+    await handleSaveStep4();
+    onContinue(files);
   };
 
   return (
@@ -160,17 +155,9 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
 
           <button
             type="submit"
-            disabled={files.length === 0 || saving}
-            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
-              ${
-                files.length > 0
-                  ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
-              } transition-all duration-300`}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
-            {saving
-              ? t("employmentUpload.saving")
-              : t("employmentUpload.continue")}
+            {t("employmentUpload.continue")}
             <ChevronRight className="w-5 h-5" />
           </button>
           {error && <p className="text-red-500 text-center">{error}</p>}

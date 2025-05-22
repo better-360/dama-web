@@ -21,12 +21,12 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSaveStep3 = async (urls: string[]) => {
+  const handleSaveStep3 = async () => {
     const data = {
       step: 3,
       section: "passport",
       data: {
-        passportFiles: urls,
+        passportFiles: [],
       },
     };
 
@@ -58,13 +58,8 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length > 0) {
-      setSaving(true);
-      const uploadedUrls = await handleUploadAll(); // handleUploadAll'u güncelleyelim
-      await handleSaveStep3(uploadedUrls);
-      setSaving(false);
-      onContinue(files);
-    }
+    await handleSaveStep3();
+    onContinue(files);
   };
 
   return (
@@ -119,13 +114,7 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
 
           <button
             type="submit"
-            disabled={files.length === 0}
-            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
-              ${
-                files.length > 0
-                  ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
-              } transition-all duration-300`}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
             {t("passportUpload.continue")}
             <ChevronRight className="w-5 h-5" />

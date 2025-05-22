@@ -103,7 +103,7 @@
       "Olay sonrası aldığınız tedavileri ve gittiğiniz hastaneleri belirtin"
     ],
     "placeholder": "Lütfen yaşadığınız olayı detaylı bir şekilde anlatın...",
-    "minChars": "Minimum 100 karakter gerekli",
+    "minChars": "Minimum 10 karakter gerekli",
     "continue": "Devam Et"
   },
   "passportUpload": {
@@ -246,6 +246,10 @@
     "childrenCount":"Çocuk Sayısı"
   },
   "summary": {
+    "dropzone": {
+      "title": "Dosyaları buraya sürükleyin veya seçin",
+      "subtitle": "PDF veya resim dosyaları kabul edilmektedir"
+    },
     "back": "Geri Dön",
     "title": "Başvuru Özeti",
     "description": "Lütfen başvuru bilgilerinizi göndermeden önce kontrol edin",
@@ -364,6 +368,26 @@
     "companyName": "Çalıştığınız şirketin adı",
     "currentSalary": "Şu anki maaşınız",
     "lastSalary": "Son işinizdeki maaşınız"
+  }
+},
+"fileUpload": {
+  "dragAndDrop": "Dosyaları buraya sürükleyin veya yüklemek için tıklayın",
+  "dragActive": "Dosyayı buraya bırakın",
+  "uploadedFiles": "Yüklenen Dosyalar",
+  "maxSize": "Maksimum dosya boyutu: {{size}}MB",
+  "acceptedFormats": "Kabul edilen formatlar: {{formats}}",
+  "uploadButton": "Dosyaları Yükle ({{count}} adet)",
+  "fileSize": {
+    "b": "B",
+    "kb": "KB",
+    "mb": "MB"
+  },
+  "errors": {
+    "invalidFileType": "Geçersiz dosya türü. Lütfen desteklenen bir format seçin.",
+    "fileTooLarge": "Dosya boyutu çok büyük. Maksimum {{size}}MB yükleyebilirsiniz.",
+    "allFilesInvalid": "Seçilen tüm dosyalar geçersiz.",
+    "someFilesInvalid": "Bazı dosyalar geçersiz, geçerli dosyalar yüklenecek.",
+    "uploadFailed": "Dosya yükleme başarısız oldu"
   }
 }
 }

@@ -387,8 +387,54 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
               )}
             </div>,
             'recognition',
-            undefined,
-            false,
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('recognition.hasDocuments')}
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateData({
+                        recognitionInfo: {
+                          hasDocuments: true,
+                          files: data.recognitionInfo.files
+                        }
+                      });
+                      setEditingSection(null);
+                    }}
+                    className={`p-4 rounded-xl font-medium transition-all duration-200 ${
+                      data.recognitionInfo.hasDocuments
+                        ? "bg-[#292A2D] text-white"
+                        : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
+                    }`}
+                  >
+                    {t("common.yes")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateData({
+                        recognitionInfo: {
+                          hasDocuments: false,
+                          files: []
+                        }
+                      });
+                      setEditingSection(null);
+                    }}
+                    className={`p-4 rounded-xl font-medium transition-all duration-200 ${
+                      !data.recognitionInfo.hasDocuments
+                        ? "bg-[#292A2D] text-white"
+                        : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
+                    }`}
+                  >
+                    {t("common.no")}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            true,
             data.recognitionInfo.hasDocuments
           )}
 

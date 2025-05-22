@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import { ArrowLeft, FileText, Download, Link as LinkIcon, Edit, Save, X, Upload } from "lucide-react";
 import type { ApplicationDetail } from "../../types/applicationDetail";
 import { sectionLabels as preApplicationSectionLabels } from "../../types/applicationDetail";
@@ -7,11 +7,66 @@ import { getApplication, getFileUrl, updateApplicationStatus, updateApplication 
 import { ApplicationStatus } from "../../../../types/status";
 import toast from "react-hot-toast";
 import AdminFileUploadComponent from "../applications/UploadComponent";
+//@ts-ignore
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import tr from 'date-fns/locale/tr';
+import { useTranslation } from 'react-i18next';
+import InputMask from 'react-input-mask';
 
 interface ClientDetailPageProps {
   id: string;
   onBack: () => void;
 }
+
+interface SectionData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  birthDate?: string;
+  incidentDescription?: string;
+  incidentFiles?: string[];
+  passportFiles?: string[];
+  employmentFiles?: string[];
+  recognitionFiles?: string[];
+  paymentFiles?: string[];
+  [key: string]: any;
+}
+
+
+interface EditingSection {
+  type: 'preApplicationData' | 'applicationData';
+  index: number;
+}
+
+interface EditData extends SectionData {
+  incidentDescription?: string;
+  incidentFiles?: string[];
+  passportFiles?: string[];
+  employmentFiles?: string[];
+  recognitionFiles?: string[];
+  paymentFiles?: string[];
+}
+
+const MaskedInput = forwardRef<HTMLInputElement, any>(({ value, onClick, onChange }, ref) => (
+  <InputMask
+    mask="99.99.9999"
+    value={value}
+    onChange={onChange}
+  >
+    {(inputProps: any) => (
+      <input
+        {...inputProps}
+        ref={ref}
+        onClick={onClick}
+        placeholder="GG.AA.YYYY"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
+      />
+    )}
+  </InputMask>
+));
+
+MaskedInput.displayName = 'MaskedInput';
 
 export default function ClientDetailPage({
   id,
@@ -24,14 +79,16 @@ export default function ClientDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('')
   const [editMode, setEditMode] = useState(false);
-  const [editingSection, setEditingSection] = useState<{ type: 'preApplicationData' | 'applicationData', index: number } | null>(null);
-  const [editData, setEditData] = useState<any>(null);
+  const [editingSection, setEditingSection] = useState<EditingSection | null>(null);
+  const [editData, setEditData] = useState<EditData>({});
   const [tempFiles, setTempFiles] = useState<File[]>([]);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"pre-application" | "application">(
     "pre-application"
   );
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchClientDetail();
@@ -61,14 +118,14 @@ export default function ClientDetailPage({
 
   const cancelEditing = () => {
     setEditingSection(null);
-    setEditData(null);
+    setEditData({});
     setEditMode(false);
     setTempFiles([]);
     setFileUploadError(null);
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setEditData((prev:any) => ({
+  const handleInputChange = (field: keyof EditData, value: any) => {
+    setEditData(prev => ({
       ...prev,
       [field]: value
     }));
@@ -267,7 +324,7 @@ export default function ClientDetailPage({
     }
   };
 
-  const renderEditableFiles = (section: any, sectionIndex: number, dataType: 'preApplicationData' | 'applicationData') => {
+  const renderEditableFiles = (section: any, sectionIndex: number, dataType: string) => {
     const sectionType = section.section;
     const fileField = getFileFieldName(sectionType);
     const folderName = getFolderName(sectionType);
@@ -449,6 +506,38 @@ export default function ClientDetailPage({
                   ) : (
                     <p className="mt-1 text-sm text-gray-900">
                       {section.data.email}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">
+                    Doğum Tarihi
+                  </label>
+                  {editMode && editingSection?.type === 'preApplicationData' && editingSection.index === sectionIndex ? (
+                    <div className="mt-1 relative">
+                      <DatePicker
+                        selected={editData.birthDate ? new Date(editData.birthDate) : null}
+                        onChange={(date: Date | null) => {
+                          if (date) {
+                            const formattedDate = date.toISOString().split('T')[0];
+                            handleInputChange('birthDate', formattedDate);
+                          } else {
+                            handleInputChange('birthDate', '');
+                          }
+                        }}
+                        customInput={<MaskedInput />}
+                        dateFormat="dd.MM.yyyy"
+                        maxDate={new Date()}
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        locale={tr}
+                        isClearable
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">
+                      {section.data.birthDate ? new Date(section.data.birthDate).toLocaleDateString('tr-TR') : '-'}
                     </p>
                   )}
                 </div>

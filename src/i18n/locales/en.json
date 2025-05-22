@@ -108,7 +108,7 @@
       "Mention the treatments you received and hospitals you visited afterward"
     ],
     "placeholder": "Please provide a detailed description of the incident...",
-    "minChars": "Minimum 100 characters required",
+    "minChars": "Minimum 10 characters required",
     "continue": "Continue"
   },
   "passportUpload": {
@@ -217,6 +217,10 @@
     "continue": "Continue"
   },
   "summary": {
+    "dropzone": {
+      "title": "Drag and drop files here or click to select",
+      "subtitle": "PDF or image files are accepted"
+    },
     "title": "Application Summary",
     "subtitle": "Please review your information and submit the form",
     "edit": "Edit",
@@ -370,6 +374,27 @@
     "companyName": "Current company name",
     "currentSalary": "Current salary",
     "lastSalary": "Salary at last job"
+  }
+},
+
+"fileUpload": {
+  "dragAndDrop": "Drag and drop files here or click to upload",
+  "dragActive": "Drop files here",
+  "uploadedFiles": "Uploaded Files",
+  "maxSize": "Maximum file size: {{size}}MB",
+  "acceptedFormats": "Accepted formats: {{formats}}",
+  "uploadButton": "Upload Files ({{count}})",
+  "fileSize": {
+    "b": "B",
+    "kb": "KB",
+    "mb": "MB"
+  },
+  "errors": {
+    "invalidFileType": "Invalid file type. Please select a supported format.",
+    "fileTooLarge": "File is too large. Maximum size is {{size}}MB.",
+    "allFilesInvalid": "All selected files are invalid.",
+    "someFilesInvalid": "Some files are invalid, valid files will be uploaded.",
+    "uploadFailed": "File upload failed"
   }
 }
 }
