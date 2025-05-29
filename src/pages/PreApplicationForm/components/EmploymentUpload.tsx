@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, AlertCircle, ChevronRight, Briefcase } from "lucide-react";
+import { ArrowLeft, AlertCircle, ChevronRight, Briefcase, Loader } from "lucide-react";
 import { uploadFileToS3 } from "../../../utils/firebase"; // S3 yükleme fonksiyonu
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
+
 interface EmploymentUploadProps {
   onBack: () => void;
-  onContinue: (files: File[]) => void;
+  onContinue: (files: string[]) => void;
+  initialFiles?: string[];
 }
 
 const folder = "employment";
@@ -14,14 +16,16 @@ const folder = "employment";
 const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
   onBack,
   onContinue,
+  initialFiles,
 }) => {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [showTips, setShowTips] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
+
   // Dosyaları S3'e yükleyip URL'leri topluyoruz.
-  
   const handleUploadAll = async (): Promise<string[]> => {
     const uploadedFileKeys: string[] = [];
 
@@ -46,22 +50,41 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
   };
 
   // İşlemleri kaydetmek için backend'e gönderme
-  const handleSaveStep4 = async () => {
+  const handleSaveStep4 = async (employmentFileUrls: string[]) => {
     const data = {
       step: 4,
       section: "employment",
       data: {
-        employmentFiles: [],
+        employmentFiles: employmentFileUrls.length > 0 ? employmentFileUrls : null,
       },
     };
 
+    console.log("Saving employment data with files:", data);
     await updatePreApplicationSection(data);
   };
+
   // Form submitinde önce dosyaları S3'e yükleyip, ardından backend'e kaydediyoruz.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleSaveStep4();
-    onContinue(files);
+    setSaving(true);
+    let employmentFileUrls: string[] = [...uploadedFiles];
+    
+    try {
+      // Upload new files if any
+      if (files.length > 0) {
+        const newUploadedUrls = await handleUploadAll();
+        employmentFileUrls = [...employmentFileUrls, ...newUploadedUrls];
+        setUploadedFiles(employmentFileUrls);
+      }
+
+      await handleSaveStep4(employmentFileUrls);
+      onContinue(employmentFileUrls); // Pass uploaded file URLs
+    } catch (error) {
+      console.error("Error saving employment data:", error);
+      setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -153,14 +176,25 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
             ]}
           />
 
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            disabled={saving}
+            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg transition-all duration-300 ${
+              saving
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
+            }`}
           >
-            {t("employmentUpload.continue")}
-            <ChevronRight className="w-5 h-5" />
+            {saving && <Loader className="w-4 h-4 mr-2 animate-spin" />}
+            {saving ? t("common.saving") : t("employmentUpload.continue")}
+            {!saving && <ChevronRight className="w-5 h-5" />}
           </button>
-          {error && <p className="text-red-500 text-center">{error}</p>}
         </form>
       </div>
     </div>

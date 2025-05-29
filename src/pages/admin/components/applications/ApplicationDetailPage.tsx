@@ -67,6 +67,8 @@ export default function ApplicationDetailPage({ id, onBack }: ApplicationDetailP
 
       console.log('Fetched application detail:', res); // Debug log
       setApplication(res);
+      setSelectedStatus(res.applicationStatus);
+
     } catch (err) {
       console.error('Error in fetchApplicationDetail:', err);
       setError('Başvuru detayları yüklenirken bir hata oluştu');

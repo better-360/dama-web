@@ -12,8 +12,11 @@ import SuccessPage from "./components/SuccessPage";
 import LanguageSelector from "../../components/LanguageSelector";
 import { completeApplication } from "../../http/requests/applicator";
 import { ApplicationType } from "../../types/form";
+import { PreApplicationProvider, usePreApplication } from "./context/PreApplicationContext";
 
-export default function PreApplicationForm() {
+// Page navigation logic separated into its own component
+function PreApplicationFormContent() {
+  const { state, actions } = usePreApplication();
   const [currentPage, setCurrentPage] = useState<
     | "intro"
     | "requirements"
@@ -26,55 +29,45 @@ export default function PreApplicationForm() {
     | "summary"
     | "success"
   >("intro");
-  const [contactInfo, setContactInfo] = useState<{
-    firstName: string;
-    lastName: string;
-    email?: string;
-  } | null>(null);
-  const [incidentDescription, setIncidentDescription] = useState("");
-  const [passportFiles, setPassportFiles] = useState<File[]>([]);
-  const [employmentFiles, setEmploymentFiles] = useState<File[]>([]);
-  const [recognitionInfo, setRecognitionInfo] = useState<{
-    hasDocuments: boolean;
-    files: File[];
-  }>({ hasDocuments: false, files: [] });
-  const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
   
   const handleSubmitApplication = async () => {
-    // Here you would typically send the data to your backend
-    await completeApplication(ApplicationType.PRE_APPLICATION)
-    setCurrentPage("success");
+    try {
+      await completeApplication(ApplicationType.PRE_APPLICATION);
+      setCurrentPage("success");
+    } catch (error) {
+      console.error("Error submitting application:", error);
+      // Handle error appropriately
+    }
   };
 
-  const handleUpdateData = (
-    newData: Partial<{
-      contactInfo: { firstName: string; lastName: string; email?: string };
-      incidentDescription: string;
-      passportFiles: File[];
-      employmentFiles: File[];
-      recognitionInfo: { hasDocuments: boolean; files: File[] };
-      paymentFiles: File[];
-    }>
-  ) => {
-    if (newData.contactInfo) {
-      setContactInfo(newData.contactInfo);
-    }
-    if (newData.incidentDescription) {
-      setIncidentDescription(newData.incidentDescription);
-    }
-    if (newData.passportFiles) {
-      setPassportFiles(newData.passportFiles);
-    }
-    if (newData.employmentFiles) {
-      setEmploymentFiles(newData.employmentFiles);
-    }
-    if (newData.recognitionInfo) {
-      setRecognitionInfo(newData.recognitionInfo);
-    }
-    if (newData.paymentFiles) {
-      setPaymentFiles(newData.paymentFiles);
-    }
-  };
+  // Show loading state
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#292A2D]"></div>
+          <p className="mt-4 text-[#292A2D] font-medium">Veriler yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (state.error) {
+    return (
+      <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+          <p className="text-red-500 mb-4">{state.error}</p>
+          <button
+            onClick={actions.loadData}
+            className="bg-[#292A2D] text-white px-4 py-2 rounded-lg hover:bg-opacity-90"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -92,9 +85,10 @@ export default function PreApplicationForm() {
       case "contact":
         return (
           <ContactInfoPage
+            initialData={state.contactInfo}
             onBack={() => setCurrentPage("requirements")}
             onContinue={(info) => {
-              setContactInfo(info);
+              actions.setContactInfo(info);
               setCurrentPage("incident");
             }}
           />
@@ -102,9 +96,12 @@ export default function PreApplicationForm() {
       case "incident":
         return (
           <IncidentForm
+            initialDescription={state.incidentDescription}
+            initialFiles={state.incidentFiles}
             onBack={() => setCurrentPage("contact")}
-            onContinue={(description) => {
-              setIncidentDescription(description);
+            onContinue={(description, fileUrls) => {
+              actions.setIncidentDescription(description);
+              actions.setIncidentFiles(fileUrls);
               setCurrentPage("passport");
             }}
           />
@@ -112,9 +109,10 @@ export default function PreApplicationForm() {
       case "passport":
         return (
           <PassportUpload
+            initialFiles={state.passportFiles}
             onBack={() => setCurrentPage("incident")}
-            onContinue={(files) => {
-              setPassportFiles(files);
+            onContinue={(fileUrls) => {
+              actions.setPassportFiles(fileUrls);
               setCurrentPage("employment");
             }}
           />
@@ -122,9 +120,10 @@ export default function PreApplicationForm() {
       case "employment":
         return (
           <EmploymentUpload
+            initialFiles={state.employmentFiles}
             onBack={() => setCurrentPage("passport")}
-            onContinue={(files) => {
-              setEmploymentFiles(files);
+            onContinue={(fileUrls) => {
+              actions.setEmploymentFiles(fileUrls);
               setCurrentPage("recognition");
             }}
           />
@@ -132,9 +131,10 @@ export default function PreApplicationForm() {
       case "recognition":
         return (
           <RecognitionUpload
+            initialData={state.recognitionInfo}
             onBack={() => setCurrentPage("employment")}
-            onContinue={(hasDocuments, files) => {
-              setRecognitionInfo({ hasDocuments, files });
+            onContinue={(hasDocuments, fileUrls) => {
+              actions.setRecognitionInfo({ hasDocuments, files: fileUrls });
               setCurrentPage("payment");
             }}
           />
@@ -142,9 +142,10 @@ export default function PreApplicationForm() {
       case "payment":
         return (
           <PaymentUpload
+            initialFiles={state.paymentFiles}
             onBack={() => setCurrentPage("recognition")}
-            onContinue={(files) => {
-              setPaymentFiles(files);
+            onContinue={(fileUrls) => {
+              actions.setPaymentFiles(fileUrls);
               setCurrentPage("summary");
             }}
           />
@@ -155,14 +156,37 @@ export default function PreApplicationForm() {
             onBack={() => setCurrentPage("payment")}
             onSubmit={handleSubmitApplication}
             data={{
-              contactInfo: contactInfo!,
-              incidentDescription,
-              passportFiles,
-              employmentFiles,
-              recognitionInfo,
-              paymentFiles,
+              contactInfo: state.contactInfo || { firstName: '', lastName: '', email: '' },
+              incidentDescription: state.incidentDescription || '',
+              incidentFiles: state.incidentFiles || [],
+              passportFiles: state.passportFiles || [],
+              employmentFiles: state.employmentFiles || [],
+              recognitionInfo: state.recognitionInfo || { hasDocuments: false, files: [] },
+              paymentFiles: state.paymentFiles || [],
             }}
-            onUpdateData={handleUpdateData}
+            onUpdateData={(newData) => {
+              if (newData.contactInfo) {
+                actions.setContactInfo(newData.contactInfo);
+              }
+              if (newData.incidentDescription !== undefined) {
+                actions.setIncidentDescription(newData.incidentDescription);
+              }
+              if (newData.incidentFiles) {
+                actions.setIncidentFiles(newData.incidentFiles);
+              }
+              if (newData.passportFiles) {
+                actions.setPassportFiles(newData.passportFiles);
+              }
+              if (newData.employmentFiles) {
+                actions.setEmploymentFiles(newData.employmentFiles);
+              }
+              if (newData.recognitionInfo) {
+                actions.setRecognitionInfo(newData.recognitionInfo);
+              }
+              if (newData.paymentFiles) {
+                actions.setPaymentFiles(newData.paymentFiles);
+              }
+            }}
           />
         );
       case "success":
@@ -173,4 +197,13 @@ export default function PreApplicationForm() {
   };
 
   return renderPage();
+}
+
+// Main component wrapped with Provider
+export default function PreApplicationForm() {
+  return (
+    <PreApplicationProvider>
+      <PreApplicationFormContent />
+    </PreApplicationProvider>
+  );
 }

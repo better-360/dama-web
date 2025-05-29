@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, UserCircle, ChevronRight } from "lucide-react";
 import {
@@ -6,25 +6,39 @@ import {
   updatePreApplicationSection,
 } from "../../../http/requests/applicator";
 
+interface ContactInfo {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  birthDate: string;
+}
+
 interface ContactInfoPageProps {
+  initialData?: ContactInfo | null;
   onBack: () => void;
-  onContinue: (contactInfo: {
-    firstName: string;
-    lastName: string;
-    email?: string;
-    birthDate: string;
-  }) => void;
+  onContinue: (contactInfo: ContactInfo) => void;
 }
 
 const ContactInfoPage: React.FC<ContactInfoPageProps> = ({
+  initialData,
   onBack,
   onContinue,
 }) => {
   const { t } = useTranslation();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [firstName, setFirstName] = useState(initialData?.firstName || "");
+  const [lastName, setLastName] = useState(initialData?.lastName || "");
+  const [email, setEmail] = useState(initialData?.email || "");
+  const [birthDate, setBirthDate] = useState(initialData?.birthDate || "");
+
+  // Update form fields when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFirstName(initialData.firstName || "");
+      setLastName(initialData.lastName || "");
+      setEmail(initialData.email || "");
+      setBirthDate(initialData.birthDate || "");
+    }
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, AlertCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, AlertCircle, ChevronRight, Loader } from "lucide-react";
 import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
 
 interface PassportUploadProps {
   onBack: () => void;
-  onContinue: (files: File[]) => void;
+  onContinue: (files: string[]) => void;
+  initialFiles?: string[];
 }
 
 const folder = "passport";
@@ -15,21 +16,24 @@ const folder = "passport";
 const PassportUpload: React.FC<PassportUploadProps> = ({
   onBack,
   onContinue,
+  initialFiles,
 }) => {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
 
-  const handleSaveStep3 = async () => {
+  const handleSaveStep3 = async (passportFileUrls: string[]) => {
     const data = {
       step: 3,
       section: "passport",
       data: {
-        passportFiles: [],
+        passportFiles: passportFileUrls.length > 0 ? passportFileUrls : null,
       },
     };
 
+    console.log("Saving passport data with files:", data);
     await updatePreApplicationSection(data);
   };
 
@@ -58,8 +62,25 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleSaveStep3();
-    onContinue(files);
+    setSaving(true);
+    let passportFileUrls: string[] = [...uploadedFiles];
+    
+    try {
+      // Upload new files if any
+      if (files.length > 0) {
+        const newUploadedUrls = await handleUploadAll();
+        passportFileUrls = [...passportFileUrls, ...newUploadedUrls];
+        setUploadedFiles(passportFileUrls);
+      }
+
+      await handleSaveStep3(passportFileUrls);
+      onContinue(passportFileUrls);
+    } catch (error) {
+      console.error("Error saving passport data:", error);
+      setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -91,6 +112,12 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <MultiFileUploadComponent
             files={files}
@@ -114,10 +141,16 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            disabled={saving}
+            className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg transition-all duration-300 ${
+              saving
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
+            }`}
           >
-            {t("passportUpload.continue")}
-            <ChevronRight className="w-5 h-5" />
+            {saving && <Loader className="w-4 h-4 mr-2 animate-spin" />}
+            {saving ? t("common.saving") : t("passportUpload.continue")}
+            {!saving && <ChevronRight className="w-5 h-5" />}
           </button>
         </form>
       </div>

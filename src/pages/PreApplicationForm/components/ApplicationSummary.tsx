@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ChevronRight, Edit2, CheckCircle, User, FileText, Import as Passport, Briefcase, Award, DollarSign, X, Save, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Edit2, CheckCircle, User, FileText, Import as Passport, Briefcase, Award, DollarSign, X, Save, Trash2, ExternalLink } from 'lucide-react';
+import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
+import { uploadFileToS3 } from '../../../utils/firebase';
 
 interface ApplicationSummaryProps {
   onBack: () => void;
@@ -10,15 +12,17 @@ interface ApplicationSummaryProps {
       firstName: string;
       lastName: string;
       email?: string;
+      birthDate?: string;
     };
     incidentDescription: string;
-    passportFiles: File[];
-    employmentFiles: File[];
+    incidentFiles: string[]; // File URLs from backend
+    passportFiles: string[]; // File URLs from backend
+    employmentFiles: string[]; // File URLs from backend
     recognitionInfo: {
       hasDocuments: boolean;
-      files: File[];
+      files: string[]; // File URLs from backend
     };
-    paymentFiles: File[];
+    paymentFiles: string[]; // File URLs from backend
   };
   onUpdateData: (newData: Partial<ApplicationSummaryProps['data']>) => void;
 }
@@ -26,156 +30,202 @@ interface ApplicationSummaryProps {
 const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmit, data, onUpdateData }) => {
   const { t } = useTranslation();
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
+  
+  // File upload states for each section
+  const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
+  const [passportFiles, setPassportFiles] = useState<File[]>([]);
+  const [employmentFiles, setEmploymentFiles] = useState<File[]>([]);
+  const [recognitionFiles, setRecognitionFiles] = useState<File[]>([]);
+  const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Safe guard for data arrays - ensure they exist and are arrays
+  const safeData = {
+    ...data,
+    incidentFiles: data.incidentFiles || [],
+    passportFiles: data.passportFiles || [],
+    employmentFiles: data.employmentFiles || [],
+    paymentFiles: data.paymentFiles || [],
+    recognitionInfo: {
+      ...data.recognitionInfo,
+      files: data.recognitionInfo?.files || []
+    }
+  };
+  
   const [editValues, setEditValues] = useState({
-    firstName: data.contactInfo.firstName,
-    lastName: data.contactInfo.lastName,
-    email: data.contactInfo.email || '',
-    incidentDescription: data.incidentDescription
+    firstName: safeData.contactInfo?.firstName || '',
+    lastName: safeData.contactInfo?.lastName || '',
+    email: safeData.contactInfo?.email || '',
+    birthDate: safeData.contactInfo?.birthDate || '',
+    incidentDescription: safeData.incidentDescription || ''
   });
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+  // File upload helper
+  const uploadFilesToS3 = async (files: File[], folder: string): Promise<string[]> => {
+    const uploadedFileKeys: string[] = [];
+    setUploading(true);
+    
+    try {
+      for (const file of files) {
+        const { fileKey } = await uploadFileToS3(file, file.name, file.type, folder);
+        uploadedFileKeys.push(fileKey);
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      setUploadError('Dosyalar yüklenirken hata oluştu.');
+    } finally {
+      setUploading(false);
     }
+    
+    return uploadedFileKeys;
   };
 
-  const handleDrop = (e: React.DragEvent, section: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    handleFiles(droppedFiles, section);
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, section: string) => {
-    const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
-    handleFiles(selectedFiles, section);
-  };
-
-  const handleFiles = (newFiles: File[], section: string) => {
-    const validFiles = newFiles.filter(file => 
-      file.type === 'application/pdf' || 
-      file.type.startsWith('image/')
-    );
-
-    switch (section) {
-      case 'passport':
-        onUpdateData({ passportFiles: [...data.passportFiles, ...validFiles] });
-        break;
-      case 'employment':
-        onUpdateData({ employmentFiles: [...data.employmentFiles, ...validFiles] });
-        break;
-      case 'recognition':
-        onUpdateData({
-          recognitionInfo: {
-            hasDocuments: true,
-            files: [...data.recognitionInfo.files, ...validFiles]
-          }
-        });
-        break;
-      case 'payment':
-        onUpdateData({ paymentFiles: [...data.paymentFiles, ...validFiles] });
-        break;
-    }
-  };
-
-  const handleDeleteFile = (section: string, index: number) => {
-    switch (section) {
-      case 'passport':
-        onUpdateData({
-          passportFiles: data.passportFiles.filter((_, i) => i !== index)
-        });
-        break;
-      case 'employment':
-        onUpdateData({
-          employmentFiles: data.employmentFiles.filter((_, i) => i !== index)
-        });
-        break;
-      case 'recognition':
-        onUpdateData({
-          recognitionInfo: {
-            ...data.recognitionInfo,
-            files: data.recognitionInfo.files.filter((_, i) => i !== index)
-          }
-        });
-        break;
-      case 'payment':
-        onUpdateData({
-          paymentFiles: data.paymentFiles.filter((_, i) => i !== index)
-        });
-        break;
-    }
-  };
-
-  const handleSave = (section: string) => {
+  const handleSave = async (section: string) => {
+    setUploadError(null);
+    
     switch (section) {
       case 'personalInfo':
         onUpdateData({
           contactInfo: {
             firstName: editValues.firstName,
             lastName: editValues.lastName,
+            birthDate: editValues.birthDate,
             ...(editValues.email && { email: editValues.email })
           }
         });
         break;
       case 'incident':
+        let newIncidentFiles = [...safeData.incidentFiles];
+        if (incidentFiles.length > 0) {
+          const uploadedFiles = await uploadFilesToS3(incidentFiles, 'incident-files');
+          newIncidentFiles = [...newIncidentFiles, ...uploadedFiles];
+          setIncidentFiles([]);
+        }
         onUpdateData({
-          incidentDescription: editValues.incidentDescription
+          incidentDescription: editValues.incidentDescription,
+          incidentFiles: newIncidentFiles
+        });
+        break;
+      case 'passport':
+        let newPassportFiles = [...safeData.passportFiles];
+        if (passportFiles.length > 0) {
+          const uploadedFiles = await uploadFilesToS3(passportFiles, 'passport');
+          newPassportFiles = [...newPassportFiles, ...uploadedFiles];
+          setPassportFiles([]);
+        }
+        onUpdateData({
+          passportFiles: newPassportFiles
+        });
+        break;
+      case 'employment':
+        let newEmploymentFiles = [...safeData.employmentFiles];
+        if (employmentFiles.length > 0) {
+          const uploadedFiles = await uploadFilesToS3(employmentFiles, 'employment');
+          newEmploymentFiles = [...newEmploymentFiles, ...uploadedFiles];
+          setEmploymentFiles([]);
+        }
+        onUpdateData({
+          employmentFiles: newEmploymentFiles
+        });
+        break;
+      case 'recognition':
+        let newRecognitionFiles = [...safeData.recognitionInfo.files];
+        if (recognitionFiles.length > 0) {
+          const uploadedFiles = await uploadFilesToS3(recognitionFiles, 'recognition');
+          newRecognitionFiles = [...newRecognitionFiles, ...uploadedFiles];
+          setRecognitionFiles([]);
+        }
+        onUpdateData({
+          recognitionInfo: {
+            ...safeData.recognitionInfo,
+            files: newRecognitionFiles
+          }
+        });
+        break;
+      case 'payment':
+        let newPaymentFiles = [...safeData.paymentFiles];
+        if (paymentFiles.length > 0) {
+          const uploadedFiles = await uploadFilesToS3(paymentFiles, 'payment');
+          newPaymentFiles = [...newPaymentFiles, ...uploadedFiles];
+          setPaymentFiles([]);
+        }
+        onUpdateData({
+          paymentFiles: newPaymentFiles
         });
         break;
     }
     setEditingSection(null);
   };
 
-  const renderFileUpload = (section: string) => (
-    <div
-      className={`relative border-2 border-dashed rounded-xl p-6 text-center mt-4
-        ${dragActive ? 'border-[#292A2D] bg-[#292A2D] bg-opacity-5' : 'border-gray-300'}
-        transition-all duration-300`}
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={(e) => handleDrop(e, section)}
-    >
-      <input
-        type="file"
-        multiple
-        accept="image/*,application/pdf"
-        onChange={(e) => handleFileInput(e, section)}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-      
-      <div className="space-y-2">
-        <div className="flex justify-center">
-          <Upload className={`w-8 h-8 ${dragActive ? 'text-[#292A2D]' : 'text-gray-400'}`} />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-gray-700">
-            {t('summary.dropzone.title')}
-          </p>
-          <p className="text-xs text-gray-500">
-            {t('summary.dropzone.subtitle')}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  // Helper function to get file name from URL
+  const getFileNameFromUrl = (url: string): string => {
+    try {
+      const urlParts = url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      // Remove any query parameters
+      return fileName.split('?')[0] || 'Document';
+    } catch {
+      return 'Document';
+    }
+  };
 
-  const renderFileList = (files: File[], section: string) => (
+  // Helper function to handle file deletion (this would need to call backend)
+  const handleDeleteFile = (section: string, index: number) => {
+    switch (section) {
+      case 'incident':
+        onUpdateData({
+          incidentFiles: safeData.incidentFiles.filter((_, i) => i !== index)
+        });
+        break;
+      case 'passport':
+        onUpdateData({
+          passportFiles: safeData.passportFiles.filter((_, i) => i !== index)
+        });
+        break;
+      case 'employment':
+        onUpdateData({
+          employmentFiles: safeData.employmentFiles.filter((_, i) => i !== index)
+        });
+        break;
+      case 'recognition':
+        onUpdateData({
+          recognitionInfo: {
+            ...safeData.recognitionInfo,
+            files: safeData.recognitionInfo.files.filter((_, i) => i !== index)
+          }
+        });
+        break;
+      case 'payment':
+        onUpdateData({
+          paymentFiles: safeData.paymentFiles.filter((_, i) => i !== index)
+        });
+        break;
+    }
+  };
+
+  const renderFileList = (files: string[], section: string) => (
     <ul className="mt-2 space-y-2">
-      {files.map((file, index) => (
-        <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-          <span className="text-sm text-gray-600">{file.name}</span>
+      {files.map((fileUrl, index) => (
+        <li key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-sm text-gray-600 truncate">
+              {getFileNameFromUrl(fileUrl)}
+            </span>
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+              title={t('common.viewFile')}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
           <button
             onClick={() => handleDeleteFile(section, index)}
-            className="text-red-500 hover:text-red-700 transition-colors p-1"
+            className="text-red-500 hover:text-red-700 transition-colors p-1 ml-2"
             title={t('common.delete')}
           >
             <Trash2 className="w-4 h-4" />
@@ -191,8 +241,7 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
     content: React.ReactNode,
     section: string,
     editForm?: React.ReactNode,
-    canEdit: boolean = true,
-    canAddFiles: boolean = false
+    canEdit: boolean = true
   ) => (
     <div className="bg-gray-50 rounded-xl p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -206,46 +255,54 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
           {canEdit && editingSection === section ? (
             <>
               <button
-                onClick={() => setEditingSection(null)}
-                className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                onClick={() => {
+                  setEditingSection(null);
+                  setUploadError(null);
+                  // Clear file inputs
+                  setIncidentFiles([]);
+                  setPassportFiles([]);
+                  setEmploymentFiles([]);
+                  setRecognitionFiles([]);
+                  setPaymentFiles([]);
+                }}
+                disabled={uploading}
+                className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
                 {t('common.cancel')}
               </button>
               <button
                 onClick={() => handleSave(section)}
-                className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800 transition-colors"
+                disabled={uploading}
+                className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800 transition-colors disabled:opacity-50"
               >
-                <Save className="w-4 h-4" />
-                {t('common.save')}
+                {uploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                    {t('common.uploading')}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {t('common.save')}
+                  </>
+                )}
               </button>
             </>
           ) : (
-            <>
-              {canEdit && (
-                <button
-                  onClick={() => setEditingSection(section)}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  {t('summary.edit')}
-                </button>
-              )}
-              {canAddFiles && (
-                <button
-                  onClick={() => setEditingSection(section)}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors ml-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  {t('summary.addFiles')}
-                </button>
-              )}
-            </>
+            canEdit && (
+              <button
+                onClick={() => setEditingSection(section)}
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                {t('summary.edit')}
+              </button>
+            )
           )}
         </div>
       </div>
       {editingSection === section && editForm ? editForm : content}
-      {editingSection === section && canAddFiles && renderFileUpload(section)}
     </div>
   );
 
@@ -277,8 +334,9 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <User className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.personalInfo'),
             <div className="text-gray-600">
-              <p>{data.contactInfo.firstName} {data.contactInfo.lastName}</p>
-              {data.contactInfo.email && <p className="text-sm">{data.contactInfo.email}</p>}
+              <p>{safeData.contactInfo?.firstName} {safeData.contactInfo?.lastName}</p>
+              {safeData.contactInfo?.email && <p className="text-sm">{safeData.contactInfo.email}</p>}
+              {safeData.contactInfo?.birthDate && <p className="text-sm">{t('contactInfo.birthDate')}: {safeData.contactInfo.birthDate}</p>}
             </div>,
             'personalInfo',
             <div className="space-y-4 mt-4">
@@ -306,6 +364,17 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('contactInfo.birthDate')}
+                </label>
+                <input
+                  type="date"
+                  value={editValues.birthDate}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, birthDate: e.target.value }))}
+                  className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('contactInfo.email')}
                 </label>
                 <input
@@ -324,9 +393,9 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <div className="text-gray-600">
               <div className="relative">
                 <p className={`whitespace-pre-wrap ${!showFullDescription && 'line-clamp-3'}`}>
-                  {data.incidentDescription}
+                  {safeData.incidentDescription}
                 </p>
-                {data.incidentDescription.length > 150 && (
+                {safeData.incidentDescription && safeData.incidentDescription.length > 150 && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
                     className="text-blue-600 hover:text-blue-800 text-sm mt-1"
@@ -335,15 +404,59 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   </button>
                 )}
               </div>
+              {safeData.incidentFiles.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium mb-2">{t('summary.attachedFiles')}</p>
+                  {renderFileList(safeData.incidentFiles, 'incident')}
+                </div>
+              )}
             </div>,
             'incident',
-            <div className="mt-4">
-              <textarea
-                value={editValues.incidentDescription}
-                onChange={(e) => setEditValues(prev => ({ ...prev, incidentDescription: e.target.value }))}
-                className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors resize-none"
-                placeholder={t('incidentForm.placeholder')}
-              />
+            <div className="space-y-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('incidentForm.label')}
+                </label>
+                <textarea
+                  value={editValues.incidentDescription}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, incidentDescription: e.target.value }))}
+                  className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors resize-none"
+                  placeholder={t('incidentForm.placeholder')}
+                />
+              </div>
+              {safeData.incidentFiles.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.attachedFiles')}</p>
+                  {renderFileList(safeData.incidentFiles, 'incident')}
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.addNewFiles')}</p>
+                <MultiFileUploadComponent
+                  files={incidentFiles}
+                  setFiles={setIncidentFiles}
+                  setError={setUploadError}
+                  label="New Incident Files"
+                  allowedTypes={[
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.ms-access",
+                    "image/jpeg",
+                    "image/png",
+                    "image/jpg",
+                  ]}
+                />
+              </div>
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {uploadError}
+                </div>
+              )}
             </div>
           )}
 
@@ -351,12 +464,42 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Passport className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.passport'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: data.passportFiles.length })}</p>
-              {renderFileList(data.passportFiles, 'passport')}
+              <p>{t('summary.filesUploaded', { count: safeData.passportFiles.length })}</p>
+              {renderFileList(safeData.passportFiles, 'passport')}
             </div>,
             'passport',
-            undefined,
-            false,
+            <div className="space-y-4 mt-4">
+              {safeData.passportFiles.length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
+                  {renderFileList(safeData.passportFiles, 'passport')}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.addNewFiles')}</p>
+                <MultiFileUploadComponent
+                  files={passportFiles}
+                  setFiles={setPassportFiles}
+                  setError={setUploadError}
+                  label="New Passport Files"
+                  allowedTypes={[
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "image/jpeg",
+                    "image/png",
+                    "image/jpg",
+                  ]}
+                />
+              </div>
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {uploadError}
+                </div>
+              )}
+            </div>,
             true
           )}
 
@@ -364,12 +507,47 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Briefcase className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.employment'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: data.employmentFiles.length })}</p>
-              {renderFileList(data.employmentFiles, 'employment')}
+              <p>{t('summary.filesUploaded', { count: safeData.employmentFiles.length })}</p>
+              {renderFileList(safeData.employmentFiles, 'employment')}
             </div>,
             'employment',
-            undefined,
-            false,
+            <div className="space-y-4 mt-4">
+              {safeData.employmentFiles.length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
+                  {renderFileList(safeData.employmentFiles, 'employment')}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.addNewFiles')}</p>
+                <MultiFileUploadComponent
+                  files={employmentFiles}
+                  setFiles={setEmploymentFiles}
+                  setError={setUploadError}
+                  label="New Employment Files"
+                  allowedTypes={[
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.ms-access",
+                    "image/jpeg",
+                    "image/png",
+                    "image/jpg",
+                  ]}
+                />
+              </div>
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {uploadError}
+                </div>
+              )}
+            </div>,
             true
           )}
 
@@ -377,10 +555,10 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Award className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.recognition'),
             <div className="text-gray-600">
-              {data.recognitionInfo.hasDocuments ? (
+              {safeData.recognitionInfo.hasDocuments ? (
                 <>
-                  <p>{t('summary.filesUploaded', { count: data.recognitionInfo.files.length })}</p>
-                  {renderFileList(data.recognitionInfo.files, 'recognition')}
+                  <p>{t('summary.filesUploaded', { count: safeData.recognitionInfo.files.length })}</p>
+                  {renderFileList(safeData.recognitionInfo.files, 'recognition')}
                 </>
               ) : (
                 <p>{t('summary.noDocuments')}</p>
@@ -390,7 +568,7 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  {t('recognition.hasDocuments')}
+                  {t('recognitionUpload.hasDocuments')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -399,13 +577,13 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                       onUpdateData({
                         recognitionInfo: {
                           hasDocuments: true,
-                          files: data.recognitionInfo.files
+                          files: safeData.recognitionInfo.files
                         }
                       });
                       setEditingSection(null);
                     }}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      data.recognitionInfo.hasDocuments
+                      safeData.recognitionInfo.hasDocuments
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -424,7 +602,7 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                       setEditingSection(null);
                     }}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      !data.recognitionInfo.hasDocuments
+                      !safeData.recognitionInfo.hasDocuments
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -433,21 +611,94 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   </button>
                 </div>
               </div>
+              {safeData.recognitionInfo.hasDocuments && (
+                <>
+                  {safeData.recognitionInfo.files.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        {t('summary.currentFiles')}
+                      </p>
+                      {renderFileList(safeData.recognitionInfo.files, 'recognition')}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.addNewFiles')}</p>
+                    <MultiFileUploadComponent
+                      files={recognitionFiles}
+                      setFiles={setRecognitionFiles}
+                      setError={setUploadError}
+                      label="New Recognition Files"
+                      allowedTypes={[
+                        "application/pdf",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.ms-powerpoint",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "application/vnd.ms-access",
+                        "image/jpeg",
+                        "image/png",
+                        "image/jpg",
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {uploadError}
+                </div>
+              )}
             </div>,
-            true,
-            data.recognitionInfo.hasDocuments
+            true
           )}
 
           {renderEditableSection(
             <DollarSign className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.payment'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: data.paymentFiles.length })}</p>
-              {renderFileList(data.paymentFiles, 'payment')}
+              <p>{t('summary.filesUploaded', { count: safeData.paymentFiles.length })}</p>
+              {renderFileList(safeData.paymentFiles, 'payment')}
             </div>,
             'payment',
-            undefined,
-            false,
+            <div className="space-y-4 mt-4">
+              {safeData.paymentFiles.length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
+                  {renderFileList(safeData.paymentFiles, 'payment')}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.addNewFiles')}</p>
+                <MultiFileUploadComponent
+                  files={paymentFiles}
+                  setFiles={setPaymentFiles}
+                  setError={setUploadError}
+                  label="New Payment Files"
+                  allowedTypes={[
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.ms-access",
+                    "image/jpeg",
+                    "image/png",
+                    "image/jpg",
+                  ]}
+                />
+              </div>
+              {uploadError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {uploadError}
+                </div>
+              )}
+            </div>,
             true
           )}
         </div>

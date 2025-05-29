@@ -1,39 +1,89 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, HelpCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, HelpCircle, ChevronRight, Loader } from "lucide-react";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
+import { uploadFileToS3 } from "../../../utils/firebase";
 
 interface IncidentFormProps {
   onBack: () => void;
-  onContinue: (description: string) => void;
+  onContinue: (description: string, files: string[]) => void;
+  initialDescription?: string;
+  initialFiles?: string[];
 }
 
-const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
+const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initialDescription, initialFiles }) => {
   const { t } = useTranslation();
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(initialDescription || "");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showTips, setShowTips] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const folder = "incident-files";
+
+  const handleUploadAll = async (): Promise<string[]> => {
+    const uploadedFileKeys: string[] = [];
+
+    for (const file of files) {
+      try {
+        const { fileKey } = await uploadFileToS3(
+          file,
+          file.name,
+          file.type,
+          folder
+        );
+        uploadedFileKeys.push(fileKey);
+      } catch (err) {
+        console.error("Error uploading file:", file.name, err);
+        setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
+      }
+    }
+    
+    setFiles([]);
+    return uploadedFileKeys;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (description.trim().length === 0 || description.trim().length >= 10) {
-      handleSaveStep2();
-      onContinue(description);
+      await handleSaveStep2();
     }
   };
 
   const handleSaveStep2 = async () => {
-    const data = {
-      step: 2,
-      section: "incident",
-      data: {
-        incidentDescription: description,
-        incidentFiles: null,
-      },
-    };
-    await updatePreApplicationSection(data);
+    setSaving(true);
+    let incidentFileUrls: string[] = [...uploadedFiles];
+    
+    try {
+      // Upload new files if any
+      if (files.length > 0) {
+        const newUploadedUrls = await handleUploadAll();
+        incidentFileUrls = [...incidentFileUrls, ...newUploadedUrls];
+        setUploadedFiles(incidentFileUrls);
+      }
+
+      const data = {
+        step: 2,
+        section: "incident",
+        data: {
+          incidentDescription: description,
+          incidentFiles: incidentFileUrls.length > 0 ? incidentFileUrls : null,
+        },
+      };
+      
+      console.log("Saving incident data with files:", data);
+      await updatePreApplicationSection(data);
+      
+      // Call onContinue after successful save with the correct file URLs
+      onContinue(description, incidentFileUrls);
+    } catch (error) {
+      console.error("Error saving incident data:", error);
+      setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isValidDescription = (text: string) => {
@@ -58,7 +108,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
           </h1>
           <p className="text-gray-600">{t("incidentForm.description")}</p>
         </div>
-
+        <p className="text-gray-600 mb-4 text-sm">{t("incidentForm.uploadDescription")}</p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="relative">
             <div className="flex justify-between items-center mb-2">
@@ -128,6 +178,8 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
             </div>
           </div>
 
+          
+
           <MultiFileUploadComponent
             files={files}
             setFiles={setFiles}
@@ -150,16 +202,17 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
 
           <button
             type="submit"
-            disabled={description.trim().length > 0 && !isValidDescription(description)}
+            disabled={description.trim().length > 0 && !isValidDescription(description) || saving}
             className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
               ${
-                description.trim().length === 0 || description.trim().length >= 10
+                (description.trim().length === 0 || description.trim().length >= 10) && !saving
                   ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               } transition-all duration-300`}
           >
-            {t("incidentForm.continue")}
-            <ChevronRight className="w-5 h-5" />
+            {saving && <Loader className="w-4 h-4 mr-2 animate-spin" />}
+            {saving ? t("common.saving") : t("incidentForm.continue")}
+            {!saving && <ChevronRight className="w-5 h-5" />}
           </button>
         </form>
       </div>
