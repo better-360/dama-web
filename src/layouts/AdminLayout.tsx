@@ -145,8 +145,9 @@ const AdminLayout: React.FC = () => {
             <h1 className="text-xl font-semibold text-gray-900">{getPageTitle()}</h1>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="relative hidden md:block">
+           
+           <div className="flex items-center space-x-4">
+           {/*  <div className="relative hidden md:block">
               <input
                 type="text"
                 placeholder="Ara..."
@@ -156,8 +157,8 @@ const AdminLayout: React.FC = () => {
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             </div>
-            
-            {/* Notifications */}
+            Mobile Search Button
+            {/* Notifications *
             <div className="relative">
               <button
                 className="relative p-2 rounded-lg hover:bg-gray-100"
@@ -191,7 +192,7 @@ const AdminLayout: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Logout Button */}
             <button

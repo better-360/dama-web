@@ -17,8 +17,8 @@ import { useNavigate } from "react-router-dom";
 //@ts-ignore
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import tr from 'date-fns/locale/tr';
 import InputMask from 'react-input-mask';
+import { parse, formatISO } from 'date-fns'
 
 // SectionData type definition - matches the API format directly
 interface SectionData {
@@ -73,7 +73,7 @@ interface AddApplicationPageProps {
 
 const MaskedInput = forwardRef<HTMLInputElement, any>(({ value, onClick, onChange }, ref) => (
   <InputMask
-    mask="99.99.9999"
+    mask="31.12.2025"
     value={value}
     onChange={onChange}
     className="w-full"
@@ -91,6 +91,12 @@ const MaskedInput = forwardRef<HTMLInputElement, any>(({ value, onClick, onChang
 ));
 
 MaskedInput.displayName = 'MaskedInput';
+
+function convertToISO(rawDateStr: string): string | null {
+  const [day, month, year] = rawDateStr.split('.')
+  const date = parse(`${day}.${month}.${year}`, 'dd.MM.yyyy', new Date(Number(year), Number(month) - 1, Number(day)))
+  return formatISO(date)
+}
 
 export default function AddApplicationPage({
   onBack,
@@ -130,16 +136,6 @@ export default function AddApplicationPage({
   const [incidentError, setIncidentError] = useState<string | null>(null);
 
   const navigate=useNavigate();
-  const minDateString = new Date(
-    new Date().setFullYear(new Date().getFullYear() - 100)
-  )
-    .toISOString()
-    .split("T")[0];
-  const maxDateString = new Date(
-    new Date().setFullYear(new Date().getFullYear() - 18)
-  )
-    .toISOString()
-    .split("T")[0];
 
   // Initialize form data structure - using the exact format expected by the API
   const [sectionsData, setSectionsData] = useState<SectionData[]>([
@@ -149,7 +145,7 @@ export default function AddApplicationPage({
       data: {
         firstName: "",
         lastName: "",
-        birthDate: null,
+        birthDate: "",
         email: "",
         telephone: "",
       },
@@ -166,7 +162,7 @@ export default function AddApplicationPage({
       step: 3,
       section: "passport",
       data: {
-        employmentFiles: [],
+        passportFiles: [],
       },
     },
     {
@@ -228,7 +224,7 @@ export default function AddApplicationPage({
     const currentFiles = getSectionData("passport")?.passportFiles || [];
     const updatedFiles = [...currentFiles, ...fileKeys];
     console.log("Updated passport files:", updatedFiles);
-    updateSectionField("passport", "employmentFiles", updatedFiles);
+    updateSectionField("passport", "passportFiles", updatedFiles);
   };
 
   const handleIncidentFileUpload = (fileKeys: string[]) => {
@@ -289,14 +285,9 @@ export default function AddApplicationPage({
   };
 
   const validateIncidentInfo = (): boolean => {
-    const incidentData = getSectionData("incident");
-
-    if (!incidentData.incidentDescription.trim()) {
-      setFormError("Olay açıklaması zorunludur");
-      return false;
-    }
-    if (incidentData.incidentDescription.length < 50) {
-      setFormError("Olay açıklaması en az 50 karakter olmalıdır");
+    const incidentData = getSectionData("incident"); 
+    if (incidentData.incidentDescription&&incidentData.incidentDescription.length < 10) {
+      setFormError("Olay açıklaması yazılacaksa en az 10 karakter olmalıdır");
       return false;
     }
     return true;
@@ -304,27 +295,11 @@ export default function AddApplicationPage({
 
   const validatePassportFiles = (): boolean => {
     const passportData = getSectionData("passport");
-
-    if (
-      !passportData.passportFiles ||
-      passportData.passportFiles.length === 0
-    ) {
-      setFormError("En az bir pasaport belgesi yüklemeniz gerekmektedir");
-      return false;
-    }
+    console.log("Validating passport files:", passportData);
     return true;
   };
 
   const validateEmploymentFiles = (): boolean => {
-    const employmentData = getSectionData("employment");
-
-    if (
-      !employmentData.employmentFiles ||
-      employmentData.employmentFiles.length === 0
-    ) {
-      setFormError("En az bir istihdam belgesi yüklemeniz gerekmektedir");
-      return false;
-    }
     return true;
   };
 
@@ -344,12 +319,6 @@ export default function AddApplicationPage({
   };
 
   const validatePaymentFiles = (): boolean => {
-    const paymentData = getSectionData("payment");
-
-    if (!paymentData.paymentFiles || paymentData.paymentFiles.length === 0) {
-      setFormError("En az bir ödeme belgesi yüklemeniz gerekmektedir");
-      return false;
-    }
     return true;
   };
 
@@ -389,19 +358,21 @@ export default function AddApplicationPage({
 
   // Create application with contact info
   const handleCreateApplication = async () => {
-    if (!validateContactInfo()) {
-      return;
-    }
-
+    if (!validateContactInfo()) return;
     setIsSubmitting(true);
     setFormError(null);
 
     try {
-      const contactData = getSectionData("contact");
-
-      console.log("Creating application with data:", contactData);
-
-      // Call API to create application with contact data
+      const contactData = { ...getSectionData("contact") };
+      if (contactData.birthDate) {
+        const isoDate = convertToISO(contactData.birthDate);
+        if (!isoDate) {
+          setFormError("Doğum tarihi geçerli bir tarih olmalı (GG.AA.YYYY)");
+          setIsSubmitting(false);
+          return;
+        }
+        contactData.birthDate = isoDate;
+      }
       const app = await createApplication(contactData);
       console.log("Application created successfully:", app);
 
@@ -455,10 +426,22 @@ export default function AddApplicationPage({
 
       console.log("Saving section data:", JSON.stringify(currentSectionData));
 
+      // Eğer contact adımındaysa, doğum tarihini çevir
+      let stepDataToSend = { ...currentSectionData };
+      if (stepDataToSend.section === "contact" && stepDataToSend.data.birthDate) {
+        stepDataToSend = {
+          ...stepDataToSend,
+          data: {
+            ...stepDataToSend.data,
+            birthDate: convertToISO(stepDataToSend.data.birthDate),
+          },
+        };
+      }
+
       // Call API to update step with current section data
       const success = await updateApplicationStep(
         applicationId,
-        currentSectionData
+        stepDataToSend
       );
 
       if (success) {
@@ -639,29 +622,18 @@ export default function AddApplicationPage({
                 <label className="block text-sm font-medium text-gray-700">
                   Doğum Tarihi
                 </label>
-                <div className="w-full">
-                  <DatePicker
-                    selected={
-                      sectionsData.find(s => s.section === "contact")?.data.birthDate instanceof Date
-                        ? sectionsData.find(s => s.section === "contact")?.data.birthDate
-                        : null
-                    }
-                    onChange={(date: Date | null) => {
-                      updateSectionField("contact", "birthDate", date);
-                    }}
-                    customInput={<MaskedInput />}
-                    dateFormat="dd.MM.yyyy"
-                    locale={tr}
-                    maxDate={new Date(maxDateString)}
-                    minDate={new Date(minDateString)}
-                    showMonthDropdown
-                    showYearDropdown
-                    dropdownMode="select"
-                    isClearable
-                    disabled={applicationCreated}
-                    wrapperClassName="w-full"
-                  />
-                </div>
+                <div>
+  <InputMask
+    mask="99.99.9999"
+    value={contactData.birthDate || ""}
+    onChange={(e) =>
+      updateSectionField("contact", "birthDate", e.target.value)
+    }
+    placeholder="GG.AA.YYYY"
+    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors mt-1"
+    disabled={applicationCreated}
+  />
+</div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
