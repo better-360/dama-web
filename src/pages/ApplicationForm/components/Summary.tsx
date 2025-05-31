@@ -1,225 +1,201 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ClipboardList, Pencil } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Edit, ChevronRight } from 'lucide-react';
+import { useApplication } from '../context/ApplicationContext';
 
-interface Child {
-  id: string;
-  name: string;
-  birthDate: string;
-}
-
-interface MaritalData {
-  maritalStatus: 'single' | 'married' | null;
-  spouseName: string;
-  hasChildren: boolean | null;
-  children: Child[];
-}
-
-interface EmploymentData {
-  employerName: string;
-  position: string;
-  salary: string;
-  startDate: string;
-  hasContract: boolean | null;
-  contractFile: string|undefined;
-  isContractor: boolean;
-  totalCompensation: string;
-  isMultiplePayments: boolean;
-}
-
-interface WorkConditionsData {
-  dailyHours: string;
-  weeklyDays: string;
-  supervisorName: string;
-  lastWorkDate: string;
-  bases: string;
-}
-
-interface PostEmploymentData {
-  hasWorked: boolean | null;
-  previousJobs: any[];
-  isCurrentlyWorking: boolean | null;
-}
-
-interface EvidenceWitnessData {
-  hasWitnesses: boolean | null;
-  witnesses: any[];
-  evidenceLinks: any[];
-}
-
-interface ApplicationData {
-  marital: MaritalData;
-  employment: EmploymentData;
-  workConditions: WorkConditionsData;
-  postEmployment: PostEmploymentData;
-  evidenceWitness: EvidenceWitnessData;
-}
+type FormStep = "marital" | "employment" | "workConditions" | "postEmployment" | "evidenceWitness";
 
 interface SummaryProps {
-  applicationData: ApplicationData;
-  onComplete: () => void;
-  onEdit: (step: 'language' | 'auth' | 'marital' | 'employment' | 'workConditions' | 'postEmployment' | 'evidenceWitness') => void;
+  onComplete: () => Promise<void>;
+  onEdit: (step: FormStep) => void;
   onBack: () => void;
 }
 
-const Summary: React.FC<SummaryProps> = ({ 
-  applicationData, 
-  onComplete, 
-  onEdit, 
-  onBack 
+const Summary: React.FC<SummaryProps> = ({
+  onComplete,
+  onEdit,
+  onBack,
 }) => {
   const { t } = useTranslation();
-  
-  // Function to format value based on field type
-  const formatValue = (value: any): string => {
-    if (typeof value === 'boolean') return value ? t('common.yes') : t('common.no');
-    if(value==="single") return t('maritalStatus.single');
-    if(value==="married") return t('maritalStatus.married');
-    if (value === null || value === undefined || value === '') return '-';
-    return String(value);
-  };
+  const { state } = useApplication();
 
-  // Section definitions with their data mapping functions
-  const sectionDefinitions = [
-    {
-      id: 'marital',
-      title: t('summary.sections.marital.title'),
-      getData: () => {
-        const data = applicationData.marital;
-        return [
-          { label: t('maritalStatus.status'), value: formatValue(data.maritalStatus) },
-          { label: t('maritalStatus.spouseName'), value: formatValue(data.spouseName) },
-          { label: t('maritalStatus.hasChildren'), value: formatValue(data.hasChildren) },
-          { label: t('maritalStatus.childrenCount'), value: data.children?.length ? String(data.children.length) : '0' },
-        ];
-      }
-    },
-    {
-      id: 'employment',
-      title: t('summary.sections.employments.title'),
-      getData: () => {
-        const data = applicationData.employment;
-        return [
-          { label: t('employment.employerName'), value: formatValue(data.employerName) },
-          { label: t('employment.position'), value: formatValue(data.position) },
-          { label: t('employment.salary'), value: formatValue(data.salary) },
-          { label: t('employment.startDate'), value: formatValue(data.startDate) },
-          { label: t('employment.hasContract'), value: formatValue(data.hasContract) },
-          { label: t('employment.isContractor'), value: formatValue(data.isContractor) },
-          { label: t('employment.totalCompensation'), value: formatValue(data.totalCompensation) },
-        ];
-      }
-    },
-    {
-      id: 'workConditions',
-      title: t('summary.sections.workConditions.title'),
-      getData: () => {
-        const data = applicationData.workConditions;
-        return [
-          { label: t('workConditions.dailyHours'), value: formatValue(data.dailyHours) },
-          { label: t('workConditions.weeklyDays'), value: formatValue(data.weeklyDays) },
-          { label: t('workConditions.supervisor'), value: formatValue(data.supervisorName) },
-          { label: t('workConditions.lastWorkDate'), value: formatValue(data.lastWorkDate) },
-          { label: t('workConditions.bases'), value: formatValue(data.bases) },
-        ];
-      }
-    },
-    {
-      id: 'postEmployment',
-      title: t('summary.sections.postEmployment.title'),
-      getData: () => {
-        const data = applicationData.postEmployment;
-        return [
-          { label: t('postEmployment.hasWorked'), value: formatValue(data.hasWorked) },
-          { label: t('postEmployment.currentEmployment.isWorking'), value: formatValue(data.isCurrentlyWorking) },
-          { label: t('postEmployment.previousJobs'), value: data.previousJobs?.length ? `${data.previousJobs.length} iş` : '-' },
-        ];
-      }
-    },
-    {
-      id: 'evidenceWitness',
-      title: t('summary.sections.evidenceWitness.title'),
-      getData: () => {
-        const data = applicationData.evidenceWitness;
-        return [
-          { label: t('evidenceWitness.witnesses.hasWitnesses'), value: formatValue(data.hasWitnesses) },
-          { label: t('evidenceWitness.witnesses.count'), value: data.witnesses?.length ? String(data.witnesses.length) : '0' },
-          { label: t('evidenceWitness.evidence.linkCount'), value: data.evidenceLinks?.length ? String(data.evidenceLinks.length) : '0' },
-        ];
-      }
-    },
-  ];
+  const renderSection = (
+    title: string,
+    editStep: FormStep,
+    children: React.ReactNode
+  ) => (
+    <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-[#292A2D]">{title}</h3>
+        <button
+          onClick={() => onEdit(editStep)}
+          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          <Edit className="w-4 h-4" />
+          {t('summary.edit')}
+        </button>
+      </div>
+      {children}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 my-8">
         <button
           onClick={onBack}
-          className="text-[#292A2D] mb-6 flex items-center gap-1 hover:opacity-80 transition-opacity"
+          className="flex items-center text-gray-600 hover:text-[#292A2D] transition-colors mb-6 group"
         >
-          <ChevronLeft className="w-5 h-5" />
-          {t('common.back')}
+          <ChevronLeft className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" />
+          {t('summary.back')}
         </button>
 
-        <div className="flex items-center justify-center mb-6">
-          <ClipboardList className="w-12 h-12 text-[#292A2D]" />
+        <div className="text-center mb-8">
+          <div className="inline-flex justify-center p-3 bg-[#292A2D] bg-opacity-5 rounded-full">
+            <CheckCircle className="w-8 h-8 text-[#292A2D]" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#292A2D] mt-4">
+            {t('summary.title')}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {t('summary.description')}
+          </p>
         </div>
 
-        <h1 className="text-3xl font-bold text-center text-[#292A2D] mb-2">
-          {t('summary.title')}
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          {t('summary.subtitle')}
-        </p>
+        <div className="space-y-6 mb-8">
+          {renderSection(
+            t('summary.sections.marital.title'),
+            'marital',
+            <div className="text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium">{t('maritalStatus.status')}:</span>{' '}
+                {state.marital.maritalStatus === 'married' 
+                  ? t('maritalStatus.married') 
+                  : state.marital.maritalStatus === 'single'
+                  ? t('maritalStatus.single')
+                  : t('common.notSpecified')}
+              </p>
+              {state.marital.maritalStatus === 'married' && state.marital.spouseName && (
+                <p>
+                  <span className="font-medium">{t('maritalStatus.spouseName')}:</span>{' '}
+                  {state.marital.spouseName}
+                </p>
+              )}
+              <p>
+                <span className="font-medium">{t('maritalStatus.hasChildren')}:</span>{' '}
+                {state.marital.hasChildren === true 
+                  ? `${t('common.yes')} (${state.marital.children.length})` 
+                  : state.marital.hasChildren === false
+                  ? t('common.no')
+                  : t('common.notSpecified')}
+              </p>
+            </div>
+          )}
 
-        <div className="space-y-6">
-          {sectionDefinitions.map((section) => {
-            const sectionData = section.getData();
-            
-            return (
-              <div
-                key={section.id}
-                className="bg-gray-50 rounded-xl p-6 relative"
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-[#292A2D]">
-                    {section.title}
-                  </h2>
-                  <button
-                    onClick={() => onEdit(section.id as any)}
-                    className="text-[#292A2D] hover:opacity-80 transition-opacity flex items-center gap-2"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    {t('summary.edit')}
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {sectionData.length > 0 ? (
-                    sectionData.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-600">{item.label}</span>
-                        <span className="font-medium text-[#292A2D]">
-                          {item.value}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-gray-500 text-center py-2">
-                      {t('common.noData', 'No data available')}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {renderSection(
+            t('summary.sections.employments.title'),
+            'employment',
+            <div className="text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium">{t('employment.employerName')}:</span>{' '}
+                {state.employment.employerName || t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('employment.position')}:</span>{' '}
+                {state.employment.position || t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('employment.salary')}:</span>{' '}
+                {state.employment.salary ? `$${state.employment.salary}` : t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('employment.hasContract')}:</span>{' '}
+                {state.employment.hasContract === true 
+                  ? t('common.yes')
+                  : state.employment.hasContract === false
+                  ? t('common.no')
+                  : t('common.notSpecified')}
+              </p>
+            </div>
+          )}
 
-          <button
-            onClick={onComplete}
-            className="w-full bg-[#292A2D] text-white py-4 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-200"
-          >
-            {t('summary.submit')}
-          </button>
+          {renderSection(
+            t('summary.sections.workConditions.title'),
+            'workConditions',
+            <div className="text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium">{t('workConditions.dailyHours')}:</span>{' '}
+                {state.workConditions.dailyHours || t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('workConditions.weeklyDays')}:</span>{' '}
+                {state.workConditions.weeklyDays || t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('workConditions.supervisor')}:</span>{' '}
+                {state.workConditions.supervisorName || t('common.notSpecified')}
+              </p>
+            </div>
+          )}
+
+          {renderSection(
+            t('summary.sections.postEmployment.title'),
+            'postEmployment',
+            <div className="text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium">{t('postEmployment.hasWorked')}:</span>{' '}
+                {state.postEmployment.hasWorked === true 
+                  ? t('common.yes')
+                  : state.postEmployment.hasWorked === false
+                  ? t('common.no')
+                  : t('common.notSpecified')}
+              </p>
+              {state.postEmployment.hasWorked && (
+                <p>
+                  <span className="font-medium">{t('postEmployment.previousJobs')}:</span>{' '}
+                  {state.postEmployment.previousJobs.length} {t('common.jobs')}
+                </p>
+              )}
+              <p>
+                <span className="font-medium">{t('postEmployment.currentlyWorking')}:</span>{' '}
+                {state.postEmployment.isCurrentlyWorking === true 
+                  ? t('common.yes')
+                  : state.postEmployment.isCurrentlyWorking === false
+                  ? t('common.no')
+                  : t('common.notSpecified')}
+              </p>
+            </div>
+          )}
+
+          {renderSection(
+            t('summary.sections.evidenceWitness.title'),
+            'evidenceWitness',
+            <div className="text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium">{t('evidenceWitness.witnesses.hasWitnesses')}:</span>{' '}
+                {state.evidenceWitness.hasWitnesses === true 
+                  ? `${t('common.yes')} (${state.evidenceWitness.witnesses.length})`
+                  : state.evidenceWitness.hasWitnesses === false
+                  ? t('common.no')
+                  : t('common.notSpecified')}
+              </p>
+              <p>
+                <span className="font-medium">{t('evidenceWitness.evidence.linkCount')}:</span>{' '}
+                {state.evidenceWitness.evidenceLinks.length} {t('common.links')}
+              </p>
+            </div>
+          )}
         </div>
+
+        <button
+          onClick={onComplete}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
+            bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]
+            transition-all duration-300"
+        >
+          {t('summary.submit')}
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
     </div>
   );

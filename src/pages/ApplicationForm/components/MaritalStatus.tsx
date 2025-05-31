@@ -1,48 +1,29 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Users, Plus, X } from 'lucide-react';
-import DatePicker from "react-datepicker";
-
-interface Child {
-  id: string;
-  name: string;
-  birthDate: string;
-}
-
-interface MaritalData {
-  maritalStatus: 'single' | 'married' | null;
-  spouseName: string;
-  hasChildren: boolean | null;
-  children: Child[];
-}
+import { useApplication, Child } from '../context/ApplicationContext';
+import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface MaritalStatusProps {
-  formData: MaritalData;
-  updateFormData: (data: Partial<MaritalData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
 const MaritalStatus: React.FC<MaritalStatusProps> = ({
-  formData,
-  updateFormData,
   onComplete,
   onBack,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = useApplication();
+  const formData = state.marital;
   
-  // Update a single field in the formData
-  const updateField = <K extends keyof MaritalData>(field: K, value: MaritalData[K]) => {
-    updateFormData({ [field]: value });
-  };
-
   // Add a new child to the children array
   const addChild = () => {
     const newChildren = [
       ...formData.children,
       { id: Date.now().toString(), name: '', birthDate: '' }
     ];
-    updateField('children', newChildren);
+    actions.setMarital({ children: newChildren });
   };
 
   // Update a specific child's field
@@ -50,17 +31,30 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
     const updatedChildren = formData.children.map(child => 
       child.id === id ? { ...child, [field]: value } : child
     );
-    updateField('children', updatedChildren);
+    actions.setMarital({ children: updatedChildren });
   };
 
   // Remove a child from the children array
   const removeChild = (id: string) => {
     const filteredChildren = formData.children.filter(child => child.id !== id);
-    updateField('children', filteredChildren);
+    actions.setMarital({ children: filteredChildren });
   };
 
-  const handleContinue = () => {
-    onComplete();
+  const handleContinue = async () => {
+    try {
+      const sectionData = {
+        step: 1,
+        section: "marital",
+        data: formData,
+      };
+
+      console.log("Saving marital data:", sectionData);
+      await updateApplicationSection(sectionData);
+      onComplete();
+    } catch (error) {
+      console.error("Error saving marital data:", error);
+      // Handle error appropriately
+    }
   };
   
   const isFormValid = () => {
@@ -96,7 +90,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => updateField('maritalStatus', 'single')}
+                onClick={() => actions.setMarital({ maritalStatus: 'single' })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.maritalStatus === 'single'
                     ? 'bg-[#292A2D] text-white'
@@ -106,7 +100,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('maritalStatus.single')}
               </button>
               <button
-                onClick={() => updateField('maritalStatus', 'married')}
+                onClick={() => actions.setMarital({ maritalStatus: 'married' })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.maritalStatus === 'married'
                     ? 'bg-[#292A2D] text-white'
@@ -126,7 +120,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
               <input
                 type="text"
                 value={formData.spouseName}
-                onChange={(e) => updateField('spouseName', e.target.value)}
+                onChange={(e) => actions.setMarital({ spouseName: e.target.value })}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                 placeholder={t('maritalStatus.spouseNamePlaceholder')}
               />
@@ -139,7 +133,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => updateField('hasChildren', true)}
+                onClick={() => actions.setMarital({ hasChildren: true })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasChildren === true
                     ? 'bg-[#292A2D] text-white'
@@ -149,7 +143,7 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                 {t('common.yes')}
               </button>
               <button
-                onClick={() => updateField('hasChildren', false)}
+                onClick={() => actions.setMarital({ hasChildren: false })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasChildren === false
                     ? 'bg-[#292A2D] text-white'
@@ -188,15 +182,15 @@ const MaritalStatus: React.FC<MaritalStatusProps> = ({
                     className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                     placeholder={t('maritalStatus.childNamePlaceholder')}
                   />
-                  <DatePicker
-                    selected={child.birthDate ? new Date(child.birthDate) : null}
-                    onChange={(date) =>
-                      updateChild(child.id, 'birthDate', date ? date.toISOString().split('T')[0] : '')
-                    }
-                    dateFormat="yyyy-MM-dd"
-                    className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
-                    placeholderText={t('maritalStatus.childBirthDatePlaceholder')}
-                    maxDate={new Date()}
+                  <input
+                    type="date"
+                    id="birthDate"
+                    value={child.birthDate}
+                    onChange={(e) => updateChild(child.id, 'birthDate', e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                    placeholder={t('maritalStatus.childBirthDatePlaceholder')}
+                    required
                   />
                 </div>
               ))}

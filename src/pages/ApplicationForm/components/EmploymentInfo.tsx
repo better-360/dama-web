@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Briefcase, Loader } from "lucide-react";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { uploadFileToS3 } from "../../../utils/firebase";
-import DatePicker from "react-datepicker";
+import { useApplication } from '../context/ApplicationContext';
+import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface EmploymentData {
   employerName: string;
@@ -17,34 +18,22 @@ interface EmploymentData {
   isMultiplePayments: boolean;
 }
 
-// Define a type for the updateFormData function to avoid type mismatch
-type UpdateFormDataFn = (data: Partial<EmploymentData>) => void;
-
 interface EmploymentInfoProps {
-  formData: EmploymentData;
-  updateFormData: UpdateFormDataFn;
-  onComplete: (updatedData?: EmploymentData) => void; // Modified to accept complete data
+  onComplete: () => void;
   onBack: () => void;
 }
 
 const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
-  formData,
-  updateFormData,
   onComplete,
   onBack,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = useApplication();
+  const formData = state.employment;
+  
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  
-  // Local copy of form data to work with
-  const [localFormData, setLocalFormData] = useState<EmploymentData>({...formData});
-  
-  // Update local copy when props change
-  useEffect(() => {
-    setLocalFormData({...formData});
-  }, [formData]);
 
   const folder = "contracts";
 
@@ -59,37 +48,23 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
           file.type,
           folder
         );
-        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
         uploadedFileKeys.push(fileKey);
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
     }
-    // İstersen burada da files'ı temizleyebilirsin.
     setFiles([]);
     return uploadedFileKeys;
   };
 
-  const handleLocalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setLocalFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Sync with parent
-    updateFormData({ [name]: value });
+    actions.setEmployment({ [name]: value });
   };
 
-  const handleOptionChange = (field: keyof EmploymentData, value: any) => {
-    setLocalFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Sync with parent
-    updateFormData({ [field]: value });
+  const handleOptionChange = (field: keyof typeof formData, value: any) => {
+    actions.setEmployment({ [field]: value });
   };
 
   const isFormValid = () => {
@@ -98,7 +73,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
 
   const handleContinue = async () => {
     setSaving(true);
-    let finalFormData = {...localFormData};
+    let finalFormData = { ...formData };
     
     try {
       // Upload files if needed
@@ -107,17 +82,22 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
         console.log("Uploaded URLs:", uploadedUrls);
         
         if (uploadedUrls.length > 0) {
-          // Update local state
           finalFormData.contractFile = uploadedUrls[0];
-          // Also update parent form data
-          updateFormData({ contractFile: uploadedUrls[0] });
+          actions.setEmployment({ contractFile: uploadedUrls[0] });
         }
       }
       
-      // Pass the complete form data with file URL to parent
-      onComplete(finalFormData);
+      const sectionData = {
+        step: 2,
+        section: "employment",
+        data: finalFormData,
+      };
+
+      console.log("Sending employment data to server:", sectionData);
+      await updateApplicationSection(sectionData);
+      onComplete();
     } catch (error) {
-      console.error("Error during save:", error);
+      console.error("Error saving employment data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
       setSaving(false);
@@ -125,11 +105,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
   };
 
   const removeContractFile = () => {
-    setLocalFormData(prev => ({
-      ...prev,
-      contractFile: undefined
-    }));
-    updateFormData({ contractFile: undefined });
+    actions.setEmployment({ contractFile: "" });
   };
 
   return (
@@ -165,8 +141,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               <input
                 type="text"
                 name="employerName"
-                value={localFormData.employerName}
-                onChange={handleLocalInputChange}
+                value={formData.employerName}
+                onChange={handleInputChange}
                 placeholder={t("employment.employerName")}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
@@ -174,32 +150,29 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
               <input
                 type="text"
                 name="position"
-                value={localFormData.position}
-                onChange={handleLocalInputChange}
+                value={formData.position}
+                onChange={handleInputChange}
                 placeholder={t("employment.position")}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
               />
-
-              <DatePicker
-                selected={localFormData.startDate ? new Date(localFormData.startDate) : null}
-                onChange={(date) => {
-                  const formattedDate = date ? date.toISOString().split('T')[0] : '';
-                  handleLocalInputChange({
-                    target: { name: 'startDate', value: formattedDate }
-                  } as React.ChangeEvent<HTMLInputElement>);
-                }}
-                dateFormat="yyyy-MM-dd"
-                className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
-                placeholderText={t("employment.startDate")}
-                maxDate={new Date()}
-              />
-
+              <input
+                    type="date"
+                    id="startDate"
+                    value={formData.startDate}
+                    onChange={(e) => handleInputChange({
+                      target: { name: 'startDate', value: e.target.value }
+                    } as React.ChangeEvent<HTMLInputElement>)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-colors"
+                    placeholder={t('employment.startDate')}
+                   
+                  />
               <div className="relative">
                 <input
                   type="number"
                   name="salary"
-                  value={localFormData.salary}
-                  onChange={handleLocalInputChange}
+                  value={formData.salary}
+                  onChange={handleInputChange}
                   placeholder={t("employment.salary")}
                   className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                 />
@@ -226,7 +199,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('isContractor', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.isContractor === true
+                      formData.isContractor === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -237,7 +210,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('isContractor', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.isContractor === false
+                      formData.isContractor === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -256,7 +229,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('isMultiplePayments', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.isMultiplePayments === false
+                      formData.isMultiplePayments === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -267,7 +240,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('isMultiplePayments', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.isMultiplePayments === true
+                      formData.isMultiplePayments === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -281,8 +254,8 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 <input
                   type="number"
                   name="totalCompensation"
-                  value={localFormData.totalCompensation}
-                  onChange={handleLocalInputChange}
+                  value={formData.totalCompensation}
+                  onChange={handleInputChange}
                   placeholder={t("employment.totalCompensation")}
                   className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                 />
@@ -309,7 +282,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('hasContract', true)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.hasContract === true
+                      formData.hasContract === true
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -320,7 +293,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     type="button"
                     onClick={() => handleOptionChange('hasContract', false)}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      localFormData.hasContract === false
+                      formData.hasContract === false
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -330,13 +303,13 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                 </div>
               </div>
 
-              {localFormData.hasContract && (
+              {formData.hasContract && (
                 <div>
-                  {localFormData.contractFile && (
+                  {formData.contractFile && (
                     <div className="mb-2 p-2 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600 truncate">
-                          {localFormData.contractFile.split('/').pop() || 'Contract file'}
+                          {formData.contractFile.split('/').pop() || 'Contract file'}
                         </span>
                         <button
                           onClick={removeContractFile}
@@ -348,7 +321,7 @@ const EmploymentInfo: React.FC<EmploymentInfoProps> = ({
                     </div>
                   )}
                   
-                  {(!localFormData.contractFile || localFormData.contractFile === "") && (
+                  {(!formData.contractFile || formData.contractFile === "") && (
                     <MultiFileUploadComponent
                       files={files}
                       setFiles={setFiles}

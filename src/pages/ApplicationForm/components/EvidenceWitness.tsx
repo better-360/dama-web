@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, FileText, Plus, X, Link as LinkIcon } from 'lucide-react';
+import { ChevronLeft, Plus, Users, X, Link, FileText } from 'lucide-react';
+import { useApplication } from '../context/ApplicationContext';
+import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface Witness {
   id: string;
@@ -21,74 +23,82 @@ interface EvidenceWitnessData {
 }
 
 interface EvidenceWitnessProps {
-  formData: EvidenceWitnessData;
-  updateFormData: (data: Partial<EvidenceWitnessData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
-const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({ 
-  formData, 
-  updateFormData, 
-  onComplete, 
-  onBack 
+const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({
+  onComplete,
+  onBack,
 }) => {
   const { t } = useTranslation();
-
-  const addEvidenceLink = () => {
-    const newEvidenceLinks = [
-      ...formData.evidenceLinks,
-      {
-        id: Date.now().toString(),
-        url: '',
-        description: '',
-      },
-    ];
-    updateFormData({ evidenceLinks: newEvidenceLinks });
-  };
-
-  const updateEvidenceLink = (id: string, field: keyof EvidenceLink, value: string) => {
-    const updatedLinks = formData.evidenceLinks.map(link =>
-      link.id === id ? { ...link, [field]: value } : link
-    );
-    updateFormData({ evidenceLinks: updatedLinks });
-  };
-
-  const removeEvidenceLink = (id: string) => {
-    const filteredLinks = formData.evidenceLinks.filter(link => link.id !== id);
-    updateFormData({ evidenceLinks: filteredLinks });
-  };
+  const { state, actions } = useApplication();
+  const formData = state.evidenceWitness;
 
   const addWitness = () => {
-    const newWitnesses = [
-      ...formData.witnesses,
-      {
-        id: Date.now().toString(),
-        firstName: '',
-        lastName: '',
-      },
-    ];
-    updateFormData({ witnesses: newWitnesses });
+    const newWitness = {
+      id: Date.now().toString(),
+      name: '',
+      contact: '',
+      relationship: ''
+    };
+    const newWitnesses = [...formData.witnesses, newWitness];
+    actions.setEvidenceWitness({ witnesses: newWitnesses });
   };
 
-  const updateWitness = (id: string, field: keyof Witness, value: string) => {
-    const updatedWitnesses = formData.witnesses.map(witness =>
+  const updateWitness = (id: string, field: string, value: string) => {
+    const updatedWitnesses = formData.witnesses.map((witness: any) =>
       witness.id === id ? { ...witness, [field]: value } : witness
     );
-    updateFormData({ witnesses: updatedWitnesses });
+    actions.setEvidenceWitness({ witnesses: updatedWitnesses });
   };
 
   const removeWitness = (id: string) => {
-    const filteredWitnesses = formData.witnesses.filter(witness => witness.id !== id);
-    updateFormData({ witnesses: filteredWitnesses });
+    const filteredWitnesses = formData.witnesses.filter((witness: any) => witness.id !== id);
+    actions.setEvidenceWitness({ witnesses: filteredWitnesses });
+  };
+
+  const addEvidenceLink = () => {
+    const newLink = {
+      id: Date.now().toString(),
+      url: '',
+      description: ''
+    };
+    const newLinks = [...formData.evidenceLinks, newLink];
+    actions.setEvidenceWitness({ evidenceLinks: newLinks });
+  };
+
+  const updateEvidenceLink = (id: string, field: string, value: string) => {
+    const updatedLinks = formData.evidenceLinks.map((link: any) =>
+      link.id === id ? { ...link, [field]: value } : link
+    );
+    actions.setEvidenceWitness({ evidenceLinks: updatedLinks });
+  };
+
+  const removeEvidenceLink = (id: string) => {
+    const filteredLinks = formData.evidenceLinks.filter((link: any) => link.id !== id);
+    actions.setEvidenceWitness({ evidenceLinks: filteredLinks });
   };
 
   const isFormValid = () => {
     return true; // No validation required
   };
 
-  const handleContinue = () => {
-    onComplete();
+  const handleContinue = async () => {
+    try {
+      const sectionData = {
+        step: 5,
+        section: "evidenceWitness",
+        data: formData,
+      };
+
+      console.log("Saving evidence witness data:", sectionData);
+      await updateApplicationSection(sectionData);
+      onComplete();
+    } catch (error) {
+      console.error("Error saving evidence witness data:", error);
+      // Handle error appropriately
+    }
   };
 
   return (
@@ -124,7 +134,7 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({
               <div key={link.id} className="p-4 bg-gray-50 rounded-xl space-y-3">
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
-                    <LinkIcon className="w-5 h-5 text-gray-500" />
+                    <Link className="w-5 h-5 text-gray-500" />
                     <h3 className="font-medium text-[#292A2D]">
                       {t('evidenceWitness.evidence.linkTitle')}
                     </h3>
@@ -177,7 +187,7 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => updateFormData({ hasWitnesses: true })}
+                  onClick={() => actions.setEvidenceWitness({ hasWitnesses: true })}
                   className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                     formData.hasWitnesses === true
                       ? 'bg-[#292A2D] text-white'
@@ -188,7 +198,7 @@ const EvidenceWitness: React.FC<EvidenceWitnessProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateFormData({ hasWitnesses: false })}
+                  onClick={() => actions.setEvidenceWitness({ hasWitnesses: false })}
                   className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                     formData.hasWitnesses === false
                       ? 'bg-[#292A2D] text-white'

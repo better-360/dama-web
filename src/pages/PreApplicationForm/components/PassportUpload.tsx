@@ -4,11 +4,11 @@ import { ArrowLeft, AlertCircle, ChevronRight, Loader } from "lucide-react";
 import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
+import { usePreApplication } from "../context/PreApplicationContext";
 
 interface PassportUploadProps {
   onBack: () => void;
-  onContinue: (files: string[]) => void;
-  initialFiles?: string[];
+  onContinue: () => void;
 }
 
 const folder = "passport";
@@ -16,13 +16,12 @@ const folder = "passport";
 const PassportUpload: React.FC<PassportUploadProps> = ({
   onBack,
   onContinue,
-  initialFiles,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = usePreApplication();
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
 
   const handleSaveStep3 = async (passportFileUrls: string[]) => {
     const data = {
@@ -48,14 +47,12 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
           file.type,
           folder
         );
-        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
         uploadedFileKeys.push(fileKey);
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
     }
-    // İstersen burada da files'ı temizleyebilirsin.
     setFiles([]);
     return uploadedFileKeys;
   };
@@ -63,18 +60,18 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    let passportFileUrls: string[] = [...uploadedFiles];
+    let passportFileUrls: string[] = [...state.passportFiles];
     
     try {
       // Upload new files if any
       if (files.length > 0) {
         const newUploadedUrls = await handleUploadAll();
         passportFileUrls = [...passportFileUrls, ...newUploadedUrls];
-        setUploadedFiles(passportFileUrls);
+        actions.setPassportFiles(passportFileUrls);
       }
 
       await handleSaveStep3(passportFileUrls);
-      onContinue(passportFileUrls);
+      onContinue();
     } catch (error) {
       console.error("Error saving passport data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -123,6 +120,11 @@ const PassportUpload: React.FC<PassportUploadProps> = ({
             files={files}
             setFiles={setFiles}
             setError={setError}
+            fileUrls={state.passportFiles}
+            onRemoveUploadedFile={(index: number) => {
+              const updatedFiles = state.passportFiles.filter((_, i) => i !== index);
+              actions.setPassportFiles(updatedFiles);
+            }}
             label="Passport"
             allowedTypes={[
               "application/pdf",

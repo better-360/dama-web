@@ -4,11 +4,11 @@ import { ArrowLeft, AlertCircle, ChevronRight, Briefcase, Loader } from "lucide-
 import { uploadFileToS3 } from "../../../utils/firebase"; // S3 yükleme fonksiyonu
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
+import { usePreApplication } from "../context/PreApplicationContext";
 
 interface EmploymentUploadProps {
   onBack: () => void;
-  onContinue: (files: string[]) => void;
-  initialFiles?: string[];
+  onContinue: () => void;
 }
 
 const folder = "employment";
@@ -16,16 +16,14 @@ const folder = "employment";
 const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
   onBack,
   onContinue,
-  initialFiles,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = usePreApplication();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [showTips, setShowTips] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
 
-  // Dosyaları S3'e yükleyip URL'leri topluyoruz.
   const handleUploadAll = async (): Promise<string[]> => {
     const uploadedFileKeys: string[] = [];
 
@@ -37,19 +35,16 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
           file.type,
           folder
         );
-        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
         uploadedFileKeys.push(fileKey);
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
     }
-    // İstersen burada da files'ı temizleyebilirsin.
     setFiles([]);
     return uploadedFileKeys;
   };
 
-  // İşlemleri kaydetmek için backend'e gönderme
   const handleSaveStep4 = async (employmentFileUrls: string[]) => {
     const data = {
       step: 4,
@@ -63,22 +58,21 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
     await updatePreApplicationSection(data);
   };
 
-  // Form submitinde önce dosyaları S3'e yükleyip, ardından backend'e kaydediyoruz.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    let employmentFileUrls: string[] = [...uploadedFiles];
+    let employmentFileUrls: string[] = [...state.employmentFiles];
     
     try {
       // Upload new files if any
       if (files.length > 0) {
         const newUploadedUrls = await handleUploadAll();
         employmentFileUrls = [...employmentFileUrls, ...newUploadedUrls];
-        setUploadedFiles(employmentFileUrls);
+        actions.setEmploymentFiles(employmentFileUrls);
       }
 
       await handleSaveStep4(employmentFileUrls);
-      onContinue(employmentFileUrls); // Pass uploaded file URLs
+      onContinue();
     } catch (error) {
       console.error("Error saving employment data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -160,6 +154,11 @@ const EmploymentUpload: React.FC<EmploymentUploadProps> = ({
             files={files}
             setFiles={setFiles}
             setError={setError}
+            fileUrls={state.employmentFiles}
+            onRemoveUploadedFile={(index: number) => {
+              const updatedFiles = state.employmentFiles.filter((_, i) => i !== index);
+              actions.setEmploymentFiles(updatedFiles);
+            }}
             label="Employment"
             allowedTypes={[
               "application/pdf",

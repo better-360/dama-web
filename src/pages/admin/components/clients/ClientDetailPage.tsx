@@ -403,9 +403,8 @@ export default function ClientDetailPage({
 
   const renderFiles = (files: string[] | undefined) => {
     if (!files || files.length === 0) {
-      return <p className="text-sm text-gray-500 italic">Dosya yüklenmemiş</p>;
+      return <p className="text-sm text-gray-500 italic">Dosya yüklenmemiş</p>
     }
-
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {files.map((file, index) => (

@@ -7,6 +7,7 @@ interface MultiFileUploadComponentProps {
   setFiles: (files: File[]) => void;
   setError?: (error: string | null) => void;
   fileUrls?: string[];
+  onRemoveUploadedFile?: (index: number) => void;
   accept?: string;
   allowedTypes?: string[];
   label?: string;
@@ -18,6 +19,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
   setFiles,
   setError,
   fileUrls = [],
+  onRemoveUploadedFile,
   accept = ".pdf,.doc,.docx,.jpg,.jpeg,.png",
   label = "Files",
   allowedTypes = [
@@ -169,8 +171,7 @@ const MultiFileUploadComponent: React.FC<MultiFileUploadComponentProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  // Implement the handler for removing uploaded files
-                  // This would require additional implementation to handle backend deletion
+                  onRemoveUploadedFile?.(index);
                 }}
                 className="text-gray-400 hover:text-red-500 transition-colors"
               >

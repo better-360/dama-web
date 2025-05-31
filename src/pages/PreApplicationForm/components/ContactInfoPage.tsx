@@ -14,7 +14,7 @@ interface ContactInfo {
 }
 
 interface ContactInfoPageProps {
-  initialData?: ContactInfo | null;
+  initialData: ContactInfo | null;
   onBack: () => void;
   onContinue: (contactInfo: ContactInfo) => void;
 }

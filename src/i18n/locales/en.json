@@ -288,7 +288,10 @@
     "yes": "Yes",
     "no": "No",
     "saving": "Saving...",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "uploading": "Uploading...",
+    "notSpecified": "Not specified",
+    "links": "Links"
   },
   "languageSelector": {
     "title": "Welcome",
@@ -324,7 +327,8 @@
     "childInfo": "Child Information",
     "childNamePlaceholder": "Enter child's name",
     "addChild": "Add Child",
-    "childrenCount": " children count"
+    "childrenCount": " children count",
+    "childBirthDatePlaceholder": "Enter child's date of birth"
   },
   "submissionComplete": {
     "title": "Application Received",
@@ -363,6 +367,7 @@
   "weeklyDays": "Days worked per week",
   "lastWorkDate": "Last Date of Work",
   "supervisor": "Supervisor's name",
+  "currentlyWorking": "Are you currently working?",
   "bases": "Bases Worked",
   "basesPlaceholder": "Specify the bases or locations where you worked",
   "loa": {
@@ -376,6 +381,7 @@
   "subtitle": "Provide information about your employment after returning from the bases",
   "hasWorked": "Have you worked anywhere since returning from the bases?",
   "previousJobs": "Previous Jobs",
+  "currentlyWorking": "Are you currently working?",
   "previousEmployment": {
     "title": "Previous Employment Information",
     "companyName": "Company name",

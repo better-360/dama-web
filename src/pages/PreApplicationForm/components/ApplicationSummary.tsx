@@ -3,32 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ChevronRight, Edit2, CheckCircle, User, FileText, Import as Passport, Briefcase, Award, DollarSign, X, Save, Trash2, ExternalLink } from 'lucide-react';
 import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
 import { uploadFileToS3 } from '../../../utils/firebase';
+import { usePreApplication } from '../context/PreApplicationContext';
 
 interface ApplicationSummaryProps {
   onBack: () => void;
   onSubmit: () => void;
-  data: {
-    contactInfo: {
-      firstName: string;
-      lastName: string;
-      email?: string;
-      birthDate?: string;
-    };
-    incidentDescription: string;
-    incidentFiles: string[]; // File URLs from backend
-    passportFiles: string[]; // File URLs from backend
-    employmentFiles: string[]; // File URLs from backend
-    recognitionInfo: {
-      hasDocuments: boolean;
-      files: string[]; // File URLs from backend
-    };
-    paymentFiles: string[]; // File URLs from backend
-  };
-  onUpdateData: (newData: Partial<ApplicationSummaryProps['data']>) => void;
 }
 
-const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmit, data, onUpdateData }) => {
+const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmit }) => {
   const { t } = useTranslation();
+  const { state, actions } = usePreApplication();
   const [editingSection, setEditingSection] = useState<string | null>(null);
   
   // File upload states for each section
@@ -39,26 +23,13 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-
-  // Safe guard for data arrays - ensure they exist and are arrays
-  const safeData = {
-    ...data,
-    incidentFiles: data.incidentFiles || [],
-    passportFiles: data.passportFiles || [],
-    employmentFiles: data.employmentFiles || [],
-    paymentFiles: data.paymentFiles || [],
-    recognitionInfo: {
-      ...data.recognitionInfo,
-      files: data.recognitionInfo?.files || []
-    }
-  };
   
   const [editValues, setEditValues] = useState({
-    firstName: safeData.contactInfo?.firstName || '',
-    lastName: safeData.contactInfo?.lastName || '',
-    email: safeData.contactInfo?.email || '',
-    birthDate: safeData.contactInfo?.birthDate || '',
-    incidentDescription: safeData.incidentDescription || ''
+    firstName: state.contactInfo?.firstName || '',
+    lastName: state.contactInfo?.lastName || '',
+    email: state.contactInfo?.email || '',
+    birthDate: state.contactInfo?.birthDate || '',
+    incidentDescription: state.incidentDescription || ''
   });
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -87,73 +58,61 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
     
     switch (section) {
       case 'personalInfo':
-        onUpdateData({
-          contactInfo: {
-            firstName: editValues.firstName,
-            lastName: editValues.lastName,
-            birthDate: editValues.birthDate,
-            ...(editValues.email && { email: editValues.email })
-          }
+        actions.setContactInfo({
+          firstName: editValues.firstName,
+          lastName: editValues.lastName,
+          birthDate: editValues.birthDate,
+          ...(editValues.email && { email: editValues.email })
         });
         break;
       case 'incident':
-        let newIncidentFiles = [...safeData.incidentFiles];
+        let newIncidentFiles = [...state.incidentFiles || []];
         if (incidentFiles.length > 0) {
           const uploadedFiles = await uploadFilesToS3(incidentFiles, 'incident-files');
           newIncidentFiles = [...newIncidentFiles, ...uploadedFiles];
           setIncidentFiles([]);
         }
-        onUpdateData({
-          incidentDescription: editValues.incidentDescription,
-          incidentFiles: newIncidentFiles
-        });
+        actions.setIncidentDescription(editValues.incidentDescription);
+        actions.setIncidentFiles(newIncidentFiles);
         break;
       case 'passport':
-        let newPassportFiles = [...safeData.passportFiles];
+        let newPassportFiles = [...state.passportFiles || []];
         if (passportFiles.length > 0) {
           const uploadedFiles = await uploadFilesToS3(passportFiles, 'passport');
           newPassportFiles = [...newPassportFiles, ...uploadedFiles];
           setPassportFiles([]);
         }
-        onUpdateData({
-          passportFiles: newPassportFiles
-        });
+        actions.setPassportFiles(newPassportFiles);
         break;
       case 'employment':
-        let newEmploymentFiles = [...safeData.employmentFiles];
+        let newEmploymentFiles = [...state.employmentFiles || []];
         if (employmentFiles.length > 0) {
           const uploadedFiles = await uploadFilesToS3(employmentFiles, 'employment');
           newEmploymentFiles = [...newEmploymentFiles, ...uploadedFiles];
           setEmploymentFiles([]);
         }
-        onUpdateData({
-          employmentFiles: newEmploymentFiles
-        });
+        actions.setEmploymentFiles(newEmploymentFiles);
         break;
       case 'recognition':
-        let newRecognitionFiles = [...safeData.recognitionInfo.files];
+        let newRecognitionFiles = [...state.recognitionInfo?.files || []];
         if (recognitionFiles.length > 0) {
           const uploadedFiles = await uploadFilesToS3(recognitionFiles, 'recognition');
           newRecognitionFiles = [...newRecognitionFiles, ...uploadedFiles];
           setRecognitionFiles([]);
         }
-        onUpdateData({
-          recognitionInfo: {
-            ...safeData.recognitionInfo,
-            files: newRecognitionFiles
-          }
+        actions.setRecognitionInfo({
+          ...state.recognitionInfo,
+          files: newRecognitionFiles
         });
         break;
       case 'payment':
-        let newPaymentFiles = [...safeData.paymentFiles];
+        let newPaymentFiles = [...state.paymentFiles || []];
         if (paymentFiles.length > 0) {
           const uploadedFiles = await uploadFilesToS3(paymentFiles, 'payment');
           newPaymentFiles = [...newPaymentFiles, ...uploadedFiles];
           setPaymentFiles([]);
         }
-        onUpdateData({
-          paymentFiles: newPaymentFiles
-        });
+        actions.setPaymentFiles(newPaymentFiles);
         break;
     }
     setEditingSection(null);
@@ -175,32 +134,22 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
   const handleDeleteFile = (section: string, index: number) => {
     switch (section) {
       case 'incident':
-        onUpdateData({
-          incidentFiles: safeData.incidentFiles.filter((_, i) => i !== index)
-        });
+        actions.setIncidentFiles(state.incidentFiles?.filter((_, i) => i !== index) || []);
         break;
       case 'passport':
-        onUpdateData({
-          passportFiles: safeData.passportFiles.filter((_, i) => i !== index)
-        });
+        actions.setPassportFiles(state.passportFiles?.filter((_, i) => i !== index) || []);
         break;
       case 'employment':
-        onUpdateData({
-          employmentFiles: safeData.employmentFiles.filter((_, i) => i !== index)
-        });
+        actions.setEmploymentFiles(state.employmentFiles?.filter((_, i) => i !== index) || []);
         break;
       case 'recognition':
-        onUpdateData({
-          recognitionInfo: {
-            ...safeData.recognitionInfo,
-            files: safeData.recognitionInfo.files.filter((_, i) => i !== index)
-          }
+        actions.setRecognitionInfo({
+          ...state.recognitionInfo,
+          files: state.recognitionInfo?.files?.filter((_, i) => i !== index) || []
         });
         break;
       case 'payment':
-        onUpdateData({
-          paymentFiles: safeData.paymentFiles.filter((_, i) => i !== index)
-        });
+        actions.setPaymentFiles(state.paymentFiles?.filter((_, i) => i !== index) || []);
         break;
     }
   };
@@ -334,9 +283,9 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <User className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.personalInfo'),
             <div className="text-gray-600">
-              <p>{safeData.contactInfo?.firstName} {safeData.contactInfo?.lastName}</p>
-              {safeData.contactInfo?.email && <p className="text-sm">{safeData.contactInfo.email}</p>}
-              {safeData.contactInfo?.birthDate && <p className="text-sm">{t('contactInfo.birthDate')}: {safeData.contactInfo.birthDate}</p>}
+              <p>{state.contactInfo?.firstName} {state.contactInfo?.lastName}</p>
+              {state.contactInfo?.email && <p className="text-sm">{state.contactInfo.email}</p>}
+              {state.contactInfo?.birthDate && <p className="text-sm">{t('contactInfo.birthDate')}: {state.contactInfo.birthDate}</p>}
             </div>,
             'personalInfo',
             <div className="space-y-4 mt-4">
@@ -393,9 +342,9 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <div className="text-gray-600">
               <div className="relative">
                 <p className={`whitespace-pre-wrap ${!showFullDescription && 'line-clamp-3'}`}>
-                  {safeData.incidentDescription}
+                  {state.incidentDescription}
                 </p>
-                {safeData.incidentDescription && safeData.incidentDescription.length > 150 && (
+                {state.incidentDescription && state.incidentDescription.length > 150 && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
                     className="text-blue-600 hover:text-blue-800 text-sm mt-1"
@@ -404,10 +353,10 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   </button>
                 )}
               </div>
-              {safeData.incidentFiles.length > 0 && (
+              {state.incidentFiles?.length > 0 && (
                 <div className="mt-4">
                   <p className="text-sm font-medium mb-2">{t('summary.attachedFiles')}</p>
-                  {renderFileList(safeData.incidentFiles, 'incident')}
+                  {renderFileList(state.incidentFiles, 'incident')}
                 </div>
               )}
             </div>,
@@ -424,10 +373,10 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   placeholder={t('incidentForm.placeholder')}
                 />
               </div>
-              {safeData.incidentFiles.length > 0 && (
+              {state.incidentFiles?.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.attachedFiles')}</p>
-                  {renderFileList(safeData.incidentFiles, 'incident')}
+                  {renderFileList(state.incidentFiles, 'incident')}
                 </div>
               )}
               <div>
@@ -464,15 +413,15 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Passport className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.passport'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: safeData.passportFiles.length })}</p>
-              {renderFileList(safeData.passportFiles, 'passport')}
+              <p>{t('summary.filesUploaded', { count: state.passportFiles?.length || 0 })}</p>
+              {renderFileList(state.passportFiles || [], 'passport')}
             </div>,
             'passport',
             <div className="space-y-4 mt-4">
-              {safeData.passportFiles.length > 0 ? (
+              {state.passportFiles?.length > 0 ? (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
-                  {renderFileList(safeData.passportFiles, 'passport')}
+                  {renderFileList(state.passportFiles, 'passport')}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>
@@ -507,15 +456,15 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Briefcase className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.employment'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: safeData.employmentFiles.length })}</p>
-              {renderFileList(safeData.employmentFiles, 'employment')}
+              <p>{t('summary.filesUploaded', { count: state.employmentFiles?.length || 0 })}</p>
+              {renderFileList(state.employmentFiles || [], 'employment')}
             </div>,
             'employment',
             <div className="space-y-4 mt-4">
-              {safeData.employmentFiles.length > 0 ? (
+              {state.employmentFiles?.length > 0 ? (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
-                  {renderFileList(safeData.employmentFiles, 'employment')}
+                  {renderFileList(state.employmentFiles, 'employment')}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>
@@ -555,10 +504,10 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <Award className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.recognition'),
             <div className="text-gray-600">
-              {safeData.recognitionInfo.hasDocuments ? (
+              {state.recognitionInfo?.hasDocuments ? (
                 <>
-                  <p>{t('summary.filesUploaded', { count: safeData.recognitionInfo.files.length })}</p>
-                  {renderFileList(safeData.recognitionInfo.files, 'recognition')}
+                  <p>{t('summary.filesUploaded', { count: state.recognitionInfo.files?.length || 0 })}</p>
+                  {renderFileList(state.recognitionInfo.files || [], 'recognition')}
                 </>
               ) : (
                 <p>{t('summary.noDocuments')}</p>
@@ -574,16 +523,15 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   <button
                     type="button"
                     onClick={() => {
-                      onUpdateData({
-                        recognitionInfo: {
-                          hasDocuments: true,
-                          files: safeData.recognitionInfo.files
-                        }
+                      actions.setRecognitionInfo({
+                        ...state.recognitionInfo,
+                        hasDocuments: true,
+                        files: state.recognitionInfo.files
                       });
                       setEditingSection(null);
                     }}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      safeData.recognitionInfo.hasDocuments
+                      state.recognitionInfo.hasDocuments
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -593,16 +541,15 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   <button
                     type="button"
                     onClick={() => {
-                      onUpdateData({
-                        recognitionInfo: {
-                          hasDocuments: false,
-                          files: []
-                        }
+                      actions.setRecognitionInfo({
+                        ...state.recognitionInfo,
+                        hasDocuments: false,
+                        files: []
                       });
                       setEditingSection(null);
                     }}
                     className={`p-4 rounded-xl font-medium transition-all duration-200 ${
-                      !safeData.recognitionInfo.hasDocuments
+                      !state.recognitionInfo.hasDocuments
                         ? "bg-[#292A2D] text-white"
                         : "bg-gray-50 hover:bg-gray-100 text-[#292A2D]"
                     }`}
@@ -611,14 +558,14 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
                   </button>
                 </div>
               </div>
-              {safeData.recognitionInfo.hasDocuments && (
+              {state.recognitionInfo.hasDocuments && (
                 <>
-                  {safeData.recognitionInfo.files.length > 0 && (
+                  {state.recognitionInfo.files?.length > 0 && (
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">
                         {t('summary.currentFiles')}
                       </p>
-                      {renderFileList(safeData.recognitionInfo.files, 'recognition')}
+                      {renderFileList(state.recognitionInfo.files, 'recognition')}
                     </div>
                   )}
                   <div>
@@ -658,15 +605,15 @@ const ApplicationSummary: React.FC<ApplicationSummaryProps> = ({ onBack, onSubmi
             <DollarSign className="w-5 h-5 text-[#292A2D]" />,
             t('summary.sections.payment'),
             <div className="text-gray-600">
-              <p>{t('summary.filesUploaded', { count: safeData.paymentFiles.length })}</p>
-              {renderFileList(safeData.paymentFiles, 'payment')}
+              <p>{t('summary.filesUploaded', { count: state.paymentFiles?.length || 0 })}</p>
+              {renderFileList(state.paymentFiles || [], 'payment')}
             </div>,
             'payment',
             <div className="space-y-4 mt-4">
-              {safeData.paymentFiles.length > 0 ? (
+              {state.paymentFiles?.length > 0 ? (
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">{t('summary.currentFiles')}</p>
-                  {renderFileList(safeData.paymentFiles, 'payment')}
+                  {renderFileList(state.paymentFiles, 'payment')}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">{t('summary.noFilesUploaded')}</p>

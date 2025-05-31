@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { getApplicationData, updatePreApplicationSection } from '../../../http/requests/applicator';
+import { getApplicationData } from '../../../http/requests/applicator';
 
 // Types
 export interface ContactInfo {
   firstName: string;
   lastName: string;
   email?: string;
-  birthDate?: string;
+  birthDate: string;
 }
 
 export interface RecognitionInfo {
@@ -15,7 +15,7 @@ export interface RecognitionInfo {
 }
 
 export interface PreApplicationState {
-  contactInfo: ContactInfo | null;
+  contactInfo: ContactInfo;
   incidentDescription: string;
   incidentFiles: string[];
   passportFiles: string[];
@@ -42,7 +42,12 @@ type PreApplicationAction =
 
 // Initial state
 const initialState: PreApplicationState = {
-  contactInfo: null,
+  contactInfo: {
+    firstName: '',
+    lastName: '',
+    email: '',
+    birthDate: '',
+  },
   incidentDescription: '',
   incidentFiles: [],
   passportFiles: [],

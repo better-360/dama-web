@@ -12,7 +12,7 @@ import SuccessPage from "./components/SuccessPage";
 import LanguageSelector from "../../components/LanguageSelector";
 import { completeApplication } from "../../http/requests/applicator";
 import { ApplicationType } from "../../types/form";
-import { PreApplicationProvider, usePreApplication } from "./context/PreApplicationContext";
+import { PreApplicationProvider, usePreApplication, ContactInfo } from "./context/PreApplicationContext";
 
 // Page navigation logic separated into its own component
 function PreApplicationFormContent() {
@@ -96,58 +96,36 @@ function PreApplicationFormContent() {
       case "incident":
         return (
           <IncidentForm
-            initialDescription={state.incidentDescription}
-            initialFiles={state.incidentFiles}
             onBack={() => setCurrentPage("contact")}
-            onContinue={(description, fileUrls) => {
-              actions.setIncidentDescription(description);
-              actions.setIncidentFiles(fileUrls);
-              setCurrentPage("passport");
-            }}
+            onContinue={() => setCurrentPage("passport")}
           />
         );
       case "passport":
         return (
           <PassportUpload
-            initialFiles={state.passportFiles}
             onBack={() => setCurrentPage("incident")}
-            onContinue={(fileUrls) => {
-              actions.setPassportFiles(fileUrls);
-              setCurrentPage("employment");
-            }}
+            onContinue={() => setCurrentPage("employment")}
           />
         );
       case "employment":
         return (
           <EmploymentUpload
-            initialFiles={state.employmentFiles}
             onBack={() => setCurrentPage("passport")}
-            onContinue={(fileUrls) => {
-              actions.setEmploymentFiles(fileUrls);
-              setCurrentPage("recognition");
-            }}
+            onContinue={() => setCurrentPage("recognition")}
           />
         );
       case "recognition":
         return (
           <RecognitionUpload
-            initialData={state.recognitionInfo}
             onBack={() => setCurrentPage("employment")}
-            onContinue={(hasDocuments, fileUrls) => {
-              actions.setRecognitionInfo({ hasDocuments, files: fileUrls });
-              setCurrentPage("payment");
-            }}
+            onContinue={() => setCurrentPage("payment")}
           />
         );
       case "payment":
         return (
           <PaymentUpload
-            initialFiles={state.paymentFiles}
             onBack={() => setCurrentPage("recognition")}
-            onContinue={(fileUrls) => {
-              actions.setPaymentFiles(fileUrls);
-              setCurrentPage("summary");
-            }}
+            onContinue={() => setCurrentPage("summary")}
           />
         );
       case "summary":
@@ -155,38 +133,6 @@ function PreApplicationFormContent() {
           <ApplicationSummary
             onBack={() => setCurrentPage("payment")}
             onSubmit={handleSubmitApplication}
-            data={{
-              contactInfo: state.contactInfo || { firstName: '', lastName: '', email: '' },
-              incidentDescription: state.incidentDescription || '',
-              incidentFiles: state.incidentFiles || [],
-              passportFiles: state.passportFiles || [],
-              employmentFiles: state.employmentFiles || [],
-              recognitionInfo: state.recognitionInfo || { hasDocuments: false, files: [] },
-              paymentFiles: state.paymentFiles || [],
-            }}
-            onUpdateData={(newData) => {
-              if (newData.contactInfo) {
-                actions.setContactInfo(newData.contactInfo);
-              }
-              if (newData.incidentDescription !== undefined) {
-                actions.setIncidentDescription(newData.incidentDescription);
-              }
-              if (newData.incidentFiles) {
-                actions.setIncidentFiles(newData.incidentFiles);
-              }
-              if (newData.passportFiles) {
-                actions.setPassportFiles(newData.passportFiles);
-              }
-              if (newData.employmentFiles) {
-                actions.setEmploymentFiles(newData.employmentFiles);
-              }
-              if (newData.recognitionInfo) {
-                actions.setRecognitionInfo(newData.recognitionInfo);
-              }
-              if (newData.paymentFiles) {
-                actions.setPaymentFiles(newData.paymentFiles);
-              }
-            }}
           />
         );
       case "success":

@@ -1,50 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { uploadFileToS3 } from '../../../utils/firebase';
 import MultiFileUploadComponent from '../../../components/MultipleFileUpload';
-import DatePicker from "react-datepicker";
+import { useApplication } from '../context/ApplicationContext';
+import { updateApplicationSection } from '../../../http/requests/applicator';
 
-interface WorkConditionsData {
-  dailyHours: string;
-  weeklyDays: string;
-  lastWorkDate: string;
-  supervisorName: string;
-  bases: string;
-  loaFile?: string;
-}
 
 interface WorkConditionsProps {
-  formData: WorkConditionsData;
-  updateFormData: (data: Partial<WorkConditionsData>) => void;
-  onComplete: (updatedData?: WorkConditionsData) => void; // Modified to accept complete data
+  onComplete: () => void;
   onBack: () => void;
 }
 
-const WorkConditions: React.FC<WorkConditionsProps> = ({ 
-  formData, 
-  updateFormData, 
+const WorkConditions: React.FC<WorkConditionsProps> = ({
   onComplete,
-  onBack 
+  onBack,
 }) => {
   const { t } = useTranslation();
-  const folder = "loa-files";
-  const [error, setError] = useState<string | null>(null);
+  const { state, actions } = useApplication();
+  const formData = state.workConditions;
+  
   const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tempLoaFile, setTempLoaFile] = useState<File | undefined>(undefined);
-  
-  // Local copy of form data to work with
-  const [localFormData, setLocalFormData] = useState<WorkConditionsData>({...formData});
-  
-  // Update local copy when props change
-  useEffect(() => {
-    setLocalFormData({...formData});
-  }, [formData]);
-  
-  useEffect(() => {
-    setTempLoaFile(files[0]);
-  }, [files]);
+
+  const folder = "loa-files";
 
   const handleUploadAll = async (): Promise<string[]> => {
     const uploadedFileKeys: string[] = [];
@@ -57,27 +37,19 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
           file.type,
           folder
         );
-        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
         uploadedFileKeys.push(fileKey);
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
     }
-    // İstersen burada da files'ı temizleyebilirsin.
     setFiles([]);
     return uploadedFileKeys;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setLocalFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Also update parent form data
-    updateFormData({ [name]: value });
+    actions.setWorkConditions({ [name]: value });
   };
 
   const isFormValid = () => {
@@ -86,26 +58,30 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
 
   const handleContinue = async () => {
     setSaving(true);
-    let finalFormData = {...localFormData};
+    let finalFormData = { ...formData };
     
     try {
       // Upload files if needed
       if (files.length > 0) {
         const uploadedUrls = await handleUploadAll();
-        console.log("Uploaded URLs:", uploadedUrls);
+        console.log("Uploaded LOA URLs:", uploadedUrls);
         
-        if (uploadedUrls.length > 0) {
-          // Update local state
-          finalFormData.loaFile = uploadedUrls[0];
-          // Also update parent form data
-          updateFormData({ loaFile: uploadedUrls[0] });
-        }
+        // For work conditions, we might want to store files in a specific field
+        // Since the interface doesn't have a specific field for files,
+        // we'll handle this based on your requirements
       }
       
-      // Pass the complete form data with file URL to parent
-      onComplete(finalFormData);
+      const sectionData = {
+        step: 3,
+        section: "workConditions",
+        data: finalFormData,
+      };
+
+      console.log("Sending work conditions data to server:", sectionData);
+      await updateApplicationSection(sectionData);
+      onComplete();
     } catch (error) {
-      console.error("Error during save:", error);
+      console.error("Error saving work conditions data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
       setSaving(false);
@@ -144,7 +120,7 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               <input
                 type="number"
                 name="dailyHours"
-                value={localFormData.dailyHours}
+                value={formData.dailyHours}
                 onChange={handleInputChange}
                 placeholder={t('workConditions.dailyHours')}
                 min="1"
@@ -155,7 +131,7 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               <input
                 type="number"
                 name="weeklyDays"
-                value={localFormData.weeklyDays}
+                value={formData.weeklyDays}
                 onChange={handleInputChange}
                 placeholder={t('workConditions.weeklyDays')}
                 min="1"
@@ -170,19 +146,12 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
             <h2 className="text-xl font-semibold text-[#292A2D]">
               {t('workConditions.lastWorkDate')}
             </h2>
-            
-            <DatePicker
-              selected={localFormData.lastWorkDate ? new Date(localFormData.lastWorkDate) : null}
-              onChange={(date) => {
-                const formattedDate = date ? date.toISOString().split('T')[0] : '';
-                handleInputChange({
-                  target: { name: 'lastWorkDate', value: formattedDate }
-                } as React.ChangeEvent<HTMLInputElement>);
-              }}
-              dateFormat="yyyy-MM-dd"
-              className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
-              placeholderText={t("workConditions.lastWorkDatePlaceholder")}
-              maxDate={new Date()}
+            <input
+              type="date"
+              name="lastWorkDate"
+              value={formData.lastWorkDate}
+              onChange={handleInputChange}
+              placeholder={t('workConditions.lastWorkDate')}
             />
           </div>
 
@@ -192,7 +161,7 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               <input
                 type="text"
                 name="supervisorName"
-                value={localFormData.supervisorName}
+                value={formData.supervisorName}
                 onChange={handleInputChange}
                 placeholder={t('workConditions.supervisor')}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
@@ -200,7 +169,7 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
 
               <textarea
                 name="bases"
-                value={localFormData.bases}
+                value={formData.bases}
                 onChange={handleInputChange}
                 placeholder={t('workConditions.basesPlaceholder')}
                 className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all resize-none h-24"
@@ -219,16 +188,15 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               </p>
             </div>
 
-            {localFormData.loaFile && (
+            {formData.loaFile && (
               <div className="mb-2 p-2 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 truncate">
-                    {localFormData.loaFile.split('/').pop() || 'LOA file'}
+                    {formData.loaFile.split('/').pop() || 'LOA file'}
                   </span>
                   <button
                     onClick={() => {
-                      setLocalFormData(prev => ({...prev, loaFile: undefined}));
-                      updateFormData({ loaFile: undefined });
+                      actions.setWorkConditions({ loaFile: undefined });
                     }}
                     className="text-red-500 hover:text-red-700"
                   >
@@ -238,7 +206,7 @@ const WorkConditions: React.FC<WorkConditionsProps> = ({
               </div>
             )}
 
-            {(!localFormData.loaFile || localFormData.loaFile === "") && (
+            {(!formData.loaFile || formData.loaFile === "") && (
               <MultiFileUploadComponent
                 files={files}
                 setFiles={setFiles}

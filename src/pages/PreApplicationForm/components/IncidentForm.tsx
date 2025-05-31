@@ -4,22 +4,20 @@ import { ArrowLeft, HelpCircle, ChevronRight, Loader } from "lucide-react";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { uploadFileToS3 } from "../../../utils/firebase";
+import { usePreApplication } from "../context/PreApplicationContext";
 
 interface IncidentFormProps {
   onBack: () => void;
-  onContinue: (description: string, files: string[]) => void;
-  initialDescription?: string;
-  initialFiles?: string[];
+  onContinue: () => void;
 }
 
-const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initialDescription, initialFiles }) => {
+const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue }) => {
   const { t } = useTranslation();
-  const [description, setDescription] = useState(initialDescription || "");
+  const { state, actions } = usePreApplication();
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showTips, setShowTips] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
 
   const folder = "incident-files";
 
@@ -47,28 +45,28 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (description.trim().length === 0 || description.trim().length >= 10) {
+    if (state.incidentDescription.trim().length === 0 || state.incidentDescription.trim().length >= 10) {
       await handleSaveStep2();
     }
   };
 
   const handleSaveStep2 = async () => {
     setSaving(true);
-    let incidentFileUrls: string[] = [...uploadedFiles];
+    let incidentFileUrls: string[] = [...state.incidentFiles];
     
     try {
       // Upload new files if any
       if (files.length > 0) {
         const newUploadedUrls = await handleUploadAll();
         incidentFileUrls = [...incidentFileUrls, ...newUploadedUrls];
-        setUploadedFiles(incidentFileUrls);
+        actions.setIncidentFiles(incidentFileUrls);
       }
 
       const data = {
         step: 2,
         section: "incident",
         data: {
-          incidentDescription: description,
+          incidentDescription: state.incidentDescription,
           incidentFiles: incidentFileUrls.length > 0 ? incidentFileUrls : null,
         },
       };
@@ -76,8 +74,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
       console.log("Saving incident data with files:", data);
       await updatePreApplicationSection(data);
       
-      // Call onContinue after successful save with the correct file URLs
-      onContinue(description, incidentFileUrls);
+      onContinue();
     } catch (error) {
       console.error("Error saving incident data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -146,10 +143,10 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
 
             <textarea
               id="incident"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={state.incidentDescription}
+              onChange={(e) => actions.setIncidentDescription(e.target.value)}
               className={`w-full h-64 p-4 border-2 rounded-xl transition-colors resize-none ${
-                description.trim().length > 0 && !isValidDescription(description)
+                state.incidentDescription.trim().length > 0 && !isValidDescription(state.incidentDescription)
                   ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   : "border-gray-200 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D]"
               }`}
@@ -158,22 +155,22 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
 
             <div className="flex justify-between items-center mt-2">
               <span className={`text-sm ${
-                description.trim().length > 0 && !isValidDescription(description)
+                state.incidentDescription.trim().length > 0 && !isValidDescription(state.incidentDescription)
                   ? "text-red-500"
                   : "text-gray-500"
               }`}>
-                {description.trim().length > 0
-                  ? description.trim().length < 10
+                {state.incidentDescription.trim().length > 0
+                  ? state.incidentDescription.trim().length < 10
                     ? t("incidentForm.minCharsWarning")
                     : t("incidentForm.minChars")
                   : t("incidentForm.optional")}
               </span>
               <span className={`text-sm ${
-                description.trim().length > 0 && !isValidDescription(description)
+                state.incidentDescription.trim().length > 0 && !isValidDescription(state.incidentDescription)
                   ? "text-red-500"
                   : "text-gray-500"
               }`}>
-                {description.length} {description.trim().length > 0 ? "/ 10" : ""}
+                {state.incidentDescription.length} {state.incidentDescription.trim().length > 0 ? "/ 10" : ""}
               </span>
             </div>
           </div>
@@ -184,6 +181,11 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
             files={files}
             setFiles={setFiles}
             setError={setError}
+            fileUrls={state.incidentFiles}
+            onRemoveUploadedFile={(index: number) => {
+              const updatedFiles = state.incidentFiles.filter((_, i) => i !== index);
+              actions.setIncidentFiles(updatedFiles);
+            }}
             label="Incident Files"
             allowedTypes={[
               "application/pdf",
@@ -202,10 +204,10 @@ const IncidentForm: React.FC<IncidentFormProps> = ({ onBack, onContinue, initial
 
           <button
             type="submit"
-            disabled={description.trim().length > 0 && !isValidDescription(description) || saving}
+            disabled={state.incidentDescription.trim().length > 0 && !isValidDescription(state.incidentDescription) || saving}
             className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-medium text-lg
               ${
-                (description.trim().length === 0 || description.trim().length >= 10) && !saving
+                (state.incidentDescription.trim().length === 0 || state.incidentDescription.trim().length >= 10) && !saving
                   ? "bg-[#292A2D] text-white hover:bg-opacity-90 transform hover:scale-[1.02] active:scale-[0.98]"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               } transition-all duration-300`}

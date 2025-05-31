@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Briefcase, Plus, X } from 'lucide-react';
+import { ChevronLeft, Briefcase, Plus, X, Calendar, MapPin, Users } from 'lucide-react';
+import DatePicker from "react-datepicker";
+import { useApplication } from '../context/ApplicationContext';
+import { updateApplicationSection } from '../../../http/requests/applicator';
 
 interface PreviousJob {
   id: string;
   companyName: string;
+  position: string;
   startDate: string;
   endDate: string;
+  reason: string;
 }
 
 interface PostEmploymentData {
@@ -19,56 +24,62 @@ interface PostEmploymentData {
 }
 
 interface PostEmploymentProps {
-  formData: PostEmploymentData;
-  updateFormData: (data: Partial<PostEmploymentData>) => void;
   onComplete: () => void;
   onBack: () => void;
 }
 
-const PostEmployment: React.FC<PostEmploymentProps> = ({ 
-  formData, 
-  updateFormData, 
-  onComplete, 
-  onBack 
+const PostEmployment: React.FC<PostEmploymentProps> = ({
+  onComplete,
+  onBack,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = useApplication();
+  const formData = state.postEmployment;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    updateFormData({ [name]: value });
+  const addJob = () => {
+    const newJob = {
+      id: Date.now().toString(),
+      companyName: '',
+      position: '',
+      startDate: '',
+      endDate: '',
+      reason: ''
+    };
+    const newJobs = [...formData.previousJobs, newJob];
+    actions.setPostEmployment({ previousJobs: newJobs });
   };
 
-  const addPreviousJob = () => {
-    const newPreviousJobs = [
-      ...formData.previousJobs,
-      {
-        id: Date.now().toString(),
-        companyName: '',
-        startDate: '',
-        endDate: '',
-      },
-    ];
-    updateFormData({ previousJobs: newPreviousJobs });
-  };
-
-  const updatePreviousJob = (id: string, field: keyof PreviousJob, value: string) => {
-    const updatedJobs = formData.previousJobs.map(job =>
+  const updateJob = (id: string, field: string, value: string) => {
+    const updatedJobs = formData.previousJobs.map((job: any) => 
       job.id === id ? { ...job, [field]: value } : job
     );
-    updateFormData({ previousJobs: updatedJobs });
+    actions.setPostEmployment({ previousJobs: updatedJobs });
   };
 
-  const removePreviousJob = (id: string) => {
-    const filteredJobs = formData.previousJobs.filter(job => job.id !== id);
-    updateFormData({ previousJobs: filteredJobs });
+  const removeJob = (id: string) => {
+    const filteredJobs = formData.previousJobs.filter((job: any) => job.id !== id);
+    actions.setPostEmployment({ previousJobs: filteredJobs });
   };
 
   const isFormValid = () => {
     return true; // No validation required
   };
 
-  const handleContinue = () => {
-    onComplete();
+  const handleContinue = async () => {
+    try {
+      const sectionData = {
+        step: 4,
+        section: "postEmployment",
+        data: formData,
+      };
+
+      console.log("Saving post employment data:", sectionData);
+      await updateApplicationSection(sectionData);
+      onComplete();
+    } catch (error) {
+      console.error("Error saving post employment data:", error);
+      // Handle error appropriately
+    }
   };
 
   return (
@@ -102,7 +113,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => updateFormData({ hasWorked: true })}
+                onClick={() => actions.setPostEmployment({ hasWorked: true })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasWorked === true
                     ? 'bg-[#292A2D] text-white'
@@ -113,7 +124,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => updateFormData({ hasWorked: false })}
+                onClick={() => actions.setPostEmployment({ hasWorked: false })}
                 className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                   formData.hasWorked === false
                     ? 'bg-[#292A2D] text-white'
@@ -140,7 +151,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                         {t('postEmployment.previousEmployment.title')}
                       </h3>
                       <button
-                        onClick={() => removePreviousJob(job.id)}
+                        onClick={() => removeJob(job.id)}
                         className="text-gray-500 hover:text-red-500 transition-colors"
                       >
                         <X className="w-5 h-5" />
@@ -150,7 +161,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                     <input
                       type="text"
                       value={job.companyName}
-                      onChange={(e) => updatePreviousJob(job.id, 'companyName', e.target.value)}
+                      onChange={(e) => updateJob(job.id, 'companyName', e.target.value)}
                       placeholder={t('postEmployment.previousEmployment.companyName')}
                       className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                     />
@@ -163,7 +174,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                         <input
                           type="date"
                           value={job.startDate}
-                          onChange={(e) => updatePreviousJob(job.id, 'startDate', e.target.value)}
+                          onChange={(e) => updateJob(job.id, 'startDate', e.target.value)}
                           className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                         />
                       </div>
@@ -174,7 +185,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                         <input
                           type="date"
                           value={job.endDate}
-                          onChange={(e) => updatePreviousJob(job.id, 'endDate', e.target.value)}
+                          onChange={(e) => updateJob(job.id, 'endDate', e.target.value)}
                           className="w-full p-3 rounded-lg border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                         />
                       </div>
@@ -183,7 +194,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                 ))}
 
                 <button
-                  onClick={addPreviousJob}
+                  onClick={addJob}
                   className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 hover:border-[#292A2D] hover:text-[#292A2D] transition-all flex items-center justify-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
@@ -204,7 +215,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => updateFormData({ isCurrentlyWorking: true })}
+                      onClick={() => actions.setPostEmployment({ isCurrentlyWorking: true })}
                       className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                         formData.isCurrentlyWorking === true
                           ? 'bg-[#292A2D] text-white'
@@ -215,7 +226,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateFormData({ isCurrentlyWorking: false })}
+                      onClick={() => actions.setPostEmployment({ isCurrentlyWorking: false })}
                       className={`p-4 rounded-xl font-medium transition-all duration-200 ${
                         formData.isCurrentlyWorking === false
                           ? 'bg-[#292A2D] text-white'
@@ -233,7 +244,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                       type="text"
                       name="currentCompany"
                       value={formData.currentCompany || ''}
-                      onChange={handleInputChange}
+                      onChange={(e) => actions.setPostEmployment({ currentCompany: e.target.value })}
                       placeholder={t('postEmployment.currentEmployment.companyName')}
                       className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all"
                     />
@@ -243,7 +254,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                         type="number"
                         name="currentSalary"
                         value={formData.currentSalary || ''}
-                        onChange={handleInputChange}
+                        onChange={(e) => actions.setPostEmployment({ currentSalary: e.target.value })}
                         placeholder={t('postEmployment.currentEmployment.currentSalary')}
                         className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                       />
@@ -258,7 +269,7 @@ const PostEmployment: React.FC<PostEmploymentProps> = ({
                       type="number"
                       name="lastSalary"
                       value={formData.lastSalary || ''}
-                      onChange={handleInputChange}
+                      onChange={(e) => actions.setPostEmployment({ lastSalary: e.target.value })}
                       placeholder={t('postEmployment.currentEmployment.lastSalary')}
                       className="w-full p-4 rounded-xl border border-gray-300 focus:border-[#292A2D] focus:ring-1 focus:ring-[#292A2D] transition-all pl-12"
                     />

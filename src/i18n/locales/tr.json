@@ -231,7 +231,10 @@
     "yes": "Evet",
     "no": "Hayır",
     "loading":"Yükleniyor...",
-    "saving": "Kaydediliyor..."
+    "saving": "Kaydediliyor...",
+    "uploading": "Yükleniyor...",
+    "notSpecified": "Belirtilmedi",
+    "links": "Linkler"
   },
 
   "maritalStatus": {
@@ -246,7 +249,8 @@
     "childInfo": "Çocuk Bilgileri",
     "childNamePlaceholder": "Çocuğunuzun adını girin",
     "addChild": "Çocuk Ekle",
-    "childrenCount":"Çocuk Sayısı"
+    "childrenCount":"Çocuk Sayısı",
+    "childBirthDatePlaceholder": "Çocuğunuzun doğum tarihini girin"
   },
   "summary": {
     "dropzone": {
@@ -355,6 +359,7 @@
   "schedule": "Çalışma Programı",
   "dailyHours": "Günlük çalışma saati",
   "weeklyDays": "Haftada kaç gün çalıştınız",
+  "currentlyWorking": "Şu anda çalışıyor musunuz?",
   "lastWorkDate": "Son Çalışma Tarihiniz",
   "supervisor": "Amirinizin adı",
   "bases": "Üsler",
@@ -368,6 +373,7 @@
   "title": "İş Sonrası Durum",
   "subtitle": "Üslerden döndükten sonraki iş durumunuz hakkında bilgi verin",
   "hasWorked": "Üslerden döndükten sonra herhangi bir işte çalıştınız mı?",
+  "currentlyWorking": "Şu anda çalışıyor musunuz?",
   "previousJobs":"Önceki İşler",
   "previousEmployment": {
     "title": "Önceki İş Bilgileri",

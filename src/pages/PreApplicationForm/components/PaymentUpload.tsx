@@ -4,11 +4,11 @@ import { ArrowLeft, AlertCircle, ChevronRight, DollarSign, HelpCircle, Loader } 
 import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
+import { usePreApplication } from "../context/PreApplicationContext";
 
 interface PaymentUploadProps {
   onBack: () => void;
-  onContinue: (files: string[]) => void;
-  initialFiles?: string[];
+  onContinue: () => void;
 }
 
 const folder = "payment";
@@ -16,30 +16,29 @@ const folder = "payment";
 const PaymentUpload: React.FC<PaymentUploadProps> = ({
   onBack,
   onContinue,
-  initialFiles,
 }) => {
   const { t } = useTranslation();
+  const { state, actions } = usePreApplication();
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTips, setShowTips] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialFiles || []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    let paymentFileUrls: string[] = [...uploadedFiles];
+    let paymentFileUrls: string[] = [...state.paymentFiles];
     
     try {
       // Upload new files if any
       if (files.length > 0) {
         const newUploadedUrls = await handleUploadAll();
         paymentFileUrls = [...paymentFileUrls, ...newUploadedUrls];
-        setUploadedFiles(paymentFileUrls);
+        actions.setPaymentFiles(paymentFileUrls);
       }
 
       await handleSaveStep6(paymentFileUrls);
-      onContinue(paymentFileUrls);
+      onContinue();
     } catch (error) {
       console.error("Error saving payment data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -59,14 +58,12 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
            file.type,
            folder
          );
-         // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
          uploadedFileKeys.push(fileKey);
        } catch (err) {
          console.error("Error uploading file:", file.name, err);
          setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
        }
      }
-     // İstersen burada da files'ı temizleyebilirsin.
      setFiles([]);
      return uploadedFileKeys;
    };
@@ -85,8 +82,6 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
     await updatePreApplicationSection(data);
   };
 
-
-  
   return (
     <div className="min-h-screen bg-[#E2E0D6] flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="max-w-3xl w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 my-8">
@@ -155,6 +150,11 @@ const PaymentUpload: React.FC<PaymentUploadProps> = ({
             files={files}
             setFiles={setFiles}
             setError={setError}
+            fileUrls={state.paymentFiles}
+            onRemoveUploadedFile={(index: number) => {
+              const updatedFiles = state.paymentFiles.filter((_, i) => i !== index);
+              actions.setPaymentFiles(updatedFiles);
+            }}
             label="Payment"
             allowedTypes={[
               "application/pdf",

@@ -4,12 +4,11 @@ import { ArrowLeft, Award, ChevronRight, Loader } from "lucide-react";
 import { uploadFileToS3 } from "../../../utils/firebase";
 import MultiFileUploadComponent from "../../../components/MultipleFileUpload";
 import { updatePreApplicationSection } from "../../../http/requests/applicator";
-import { RecognitionInfo } from "../context/PreApplicationContext";
+import { usePreApplication } from "../context/PreApplicationContext";
 
 interface RecognitionUploadProps {
   onBack: () => void;
-  onContinue: (hasDocuments: boolean, files: string[]) => void;
-  initialData?: RecognitionInfo;
+  onContinue: () => void;
 }
 
 const folder = "recognition";
@@ -17,34 +16,38 @@ const folder = "recognition";
 const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
   onBack,
   onContinue,
-  initialData,
 }) => {
   const { t } = useTranslation();
-  // Always start with null to show the question screen, but store initial data for reference
-  const [hasDocuments, setHasDocuments] = useState<boolean | null>(null);
+  const { state, actions } = usePreApplication();
+  const [hasDocuments, setHasDocuments] = useState<boolean | null>(
+    state.recognitionInfo.hasDocuments !== undefined ? state.recognitionInfo.hasDocuments : null
+  );
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>(initialData?.files || []);
 
-  // Show current selection if user has made a choice
-  const currentSelection = hasDocuments !== null ? hasDocuments : initialData?.hasDocuments;
+  const currentSelection = hasDocuments !== null ? hasDocuments : state.recognitionInfo.hasDocuments;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    let recognitionFileUrls: string[] = [...uploadedFiles];
+    let recognitionFileUrls: string[] = [...state.recognitionInfo.files];
     
     try {
       // Upload new files if any
       if (files.length > 0) {
         const newUploadedUrls = await handleUploadAll();
         recognitionFileUrls = [...recognitionFileUrls, ...newUploadedUrls];
-        setUploadedFiles(recognitionFileUrls);
       }
 
+      // Update context
+      actions.setRecognitionInfo({
+        hasDocuments: currentSelection!,
+        files: recognitionFileUrls,
+      });
+
       await handleSaveStep5(recognitionFileUrls);
-      onContinue(currentSelection!, recognitionFileUrls);
+      onContinue();
     } catch (error) {
       console.error("Error saving recognition data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -78,14 +81,12 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
           file.type,
           folder
         );
-        // Dosya URL'sini oluşturmak yerine fileKey'i saklıyoruz
         uploadedFileKeys.push(fileKey);
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         setError(`Dosya ${file.name} yüklenirken hata oluştu.`);
       }
     }
-    // İstersen burada da files'ı temizleyebilirsin.
     setFiles([]);
     return uploadedFileKeys;
   };
@@ -93,8 +94,12 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
   const handleNoDocuments = async () => {
     setSaving(true);
     try {
+      actions.setRecognitionInfo({
+        hasDocuments: false,
+        files: [],
+      });
       await handleSaveStep5([]);
-      onContinue(false, []);
+      onContinue();
     } catch (error) {
       console.error("Error saving recognition data:", error);
       setError("Formunuz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
@@ -133,7 +138,7 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
             <button
               onClick={() => setHasDocuments(true)}
               className={`w-full p-6 rounded-xl border-2 text-left transition-all duration-300 group ${
-                initialData?.hasDocuments === true
+                state.recognitionInfo.hasDocuments === true
                   ? "border-[#292A2D] bg-[#292A2D] text-white"
                   : "border-[#292A2D] hover:bg-[#292A2D] hover:text-white"
               }`}
@@ -155,7 +160,7 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
               className={`w-full p-6 rounded-xl border-2 transition-all duration-300 group text-left ${
                 saving 
                   ? "border-gray-200 bg-gray-50 cursor-not-allowed"
-                  : initialData?.hasDocuments === false
+                  : state.recognitionInfo.hasDocuments === false
                   ? "border-[#292A2D] bg-[#292A2D] text-white"
                   : "border-gray-200 hover:border-[#292A2D]"
               }`}
@@ -211,6 +216,14 @@ const RecognitionUpload: React.FC<RecognitionUploadProps> = ({
             files={files}
             setFiles={setFiles}
             setError={setError}
+            fileUrls={state.recognitionInfo.files}
+            onRemoveUploadedFile={(index: number) => {
+              const updatedFiles = state.recognitionInfo.files.filter((_, i) => i !== index);
+              actions.setRecognitionInfo({
+                ...state.recognitionInfo,
+                files: updatedFiles,
+              });
+            }}
             label="Recognition"
             allowedTypes={[
               "application/pdf",
